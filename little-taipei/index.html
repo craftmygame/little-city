@@ -19,8 +19,8 @@
   html,body{margin:0;height:100%;overflow:hidden;background:var(--teal);
     font-family:'Fredoka',system-ui,sans-serif;color:var(--ink);
     user-select:none;-webkit-user-select:none;touch-action:none;}
-  #app{position:fixed;inset:0;}
-  canvas{display:block;}
+  #app{position:fixed;inset:0;width:100%;height:100%;}
+  canvas{display:block;width:100%;height:100%;}
 
   /* ---------- HUD ---------- */
   #hud{position:fixed;inset:0;pointer-events:none;z-index:10;}
@@ -106,7 +106,7 @@
   @keyframes sp{to{transform:rotate(360deg);}}
 
   /* ---------- leaderboard ---------- */
-  #lb{position:fixed;right:14px;bottom:14px;z-index:11;min-width:172px;max-width:220px;display:none;}
+  #lb{position:fixed;right:14px;bottom:94px;z-index:11;min-width:172px;max-width:220px;display:none;}
   #lb h3{margin:0 0 6px;font-size:14px;color:var(--teal-dk);text-transform:uppercase;letter-spacing:1px;}
   #lb ol{margin:0;padding:0;list-style:none;font-size:14px;font-weight:600;}
   #lb li{display:flex;justify-content:space-between;gap:8px;padding:2px 0;}
@@ -115,6 +115,17 @@
   #roomline{position:fixed;left:14px;bottom:14px;z-index:11;font-size:13px;color:#2e3b3a;
     background:rgba(255,255,255,.8);border-radius:12px;padding:7px 12px;border:2px solid #fff;display:none;
     pointer-events:auto;cursor:pointer;font-weight:600;}
+  #githubHelp{position:fixed;right:14px;bottom:14px;z-index:11;pointer-events:auto;display:grid;
+    grid-template-columns:auto 1fr;align-items:center;gap:10px;width:min(340px,calc(100vw - 28px));padding:10px 13px;border:2px solid #fff;border-radius:14px;
+    background:rgba(255,255,255,.86);color:var(--ink);box-shadow:0 5px 0 rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.72);
+    text-decoration:none;font-weight:600;backdrop-filter:blur(4px);
+    transition:transform .18s ease,box-shadow .18s ease,background .18s ease;}
+  #githubHelp .source{align-self:start;color:var(--teal-dk);font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;line-height:1.2;padding-top:2px;}
+  #githubHelp .helpTitle{display:block;font-size:14px;font-weight:700;line-height:1.15;}
+  #githubHelp .helpDetail{display:block;margin-top:4px;color:#60706e;font-size:11px;font-weight:500;line-height:1.3;}
+  #githubHelp:hover{background:#fff;transform:translateY(-2px);box-shadow:0 7px 0 rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.72);}
+  #githubHelp:active{transform:translateY(2px);box-shadow:0 3px 0 rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.72);}
+  #githubHelp:focus-visible{outline:3px solid var(--sun);outline-offset:3px;}
   @media (max-width:620px){
     .card h1{font-size:30px;}
     .panel{padding:7px 11px;border-radius:14px;}
@@ -126,6 +137,9 @@
     #objArrow{top:108px;width:46px;height:46px;}
     #lb{display:none!important;}
     #roomline{bottom:206px;left:10px;font-size:12px;}
+    #githubHelp{right:10px;bottom:7px;display:block;width:auto;max-width:166px;padding:5px 8px;border-radius:9px;box-shadow:0 3px 0 rgba(0,0,0,.12);}
+    #githubHelp .source,#githubHelp .helpDetail{display:none;}
+    #githubHelp .helpTitle{font-size:10px;line-height:1.15;}
   }
 </style>
 </head>
@@ -144,6 +158,10 @@
   <svg id="objArrow" viewBox="0 0 100 100"><path d="M50 6 L74 64 L50 50 L26 64 Z" fill="#e9785b" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg>
   <div id="lb" class="panel"><h3>🏆 Top Runners</h3><ol id="lbList"></ol></div>
   <div id="roomline">🔗 invite friends</div>
+  <a id="githubHelp" href="https://github.com/craftmygame/little-city/" target="_blank" rel="noopener noreferrer" aria-label="Help make Little Taipei more realistic with Codex or Claude Code on GitHub">
+    <span class="source">GitHub</span>
+    <span><strong class="helpTitle">Help us make Taipei more realistic</strong><small class="helpDetail">Have Codex or Claude Code tokens? Improve a building and send a PR.</small></span>
+  </a>
 </div>
 
 <div id="prompt"><b id="promptKey">E</b><span id="promptTxt">interact</span></div>
@@ -168,7 +186,7 @@
       <input class="name" id="nameInput" maxlength="14" placeholder="your name" />
     </div>
     <button class="bigbtn" id="beginBtn">BEGIN</button>
-    <p class="muted" id="mpNote">Loading multiplayer…</p>
+    <p class="muted" id="mpNote">Your room joins when you begin.</p>
   </div>
 </div>
 
@@ -3126,18 +3144,26 @@ document.getElementById('btnHelp').addEventListener('click',()=>{ alert('Tiny Pl
 //  MULTIPLAYER (Antics) — rooms, presence, emotes, live leaderboard
 //  Loads /sdk/v1.js when deployed on Antics; stays solo otherwise.
 // ---------------------------------------------------------------
-let room=null, myName='Guest', lastScoreSubmit=0, startTime=0, sdkLib=null;
+let room=null, myName='Guest', lastScoreSubmit=0, startTime=0, sdkLib=null, roomConnectPromise=null;
 const remote=new Map();  // id -> {group, parts, tag, parcel, target, wp, carry, score, name}
 function syncQuestToRoom(){ /* per-player game; nothing shared */ }
 async function initMultiplayer(){
+  if(room) return room;
+  if(roomConnectPromise) return roomConnectPromise;
   const note=document.getElementById('mpNote');
-  try { sdkLib = await import('/sdk/v1.js'); }
-  catch(e){ if(note) note.textContent='Solo mode — deploy to play with friends'; return; }
-  try { room = await sdkLib.joinRoom({ name: myName });
-    if(note){ note.textContent='Online! Invite friends with the link below 🔗'; tw(note); }
-    setupRoom();
-  } catch(e){ room=null; if(note) note.textContent='Solo mode'; }
+  roomConnectPromise=(async()=>{
+    if(note) note.textContent='Joining your room…';
+    try { sdkLib = await import('/sdk/v1.js'); }
+    catch(e){ if(note) note.textContent='Solo mode — deploy to play with friends'; return null; }
+    try { room = await sdkLib.joinRoom({ name: myName });
+      if(note){ note.textContent='Online! Invite friends with the link below 🔗'; tw(note); }
+      setupRoom();
+      return room;
+    } catch(e){ room=null; if(note) note.textContent='Solo mode'; return null; }
+  })();
+  return roomConnectPromise;
 }
+function isSelfPlayer(p){ return !!(p && room && room.me && p.id===room.me.id); }
 function colorFromId(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i++) h=(h*131+s.charCodeAt(i))%360; return new THREE.Color().setHSL(h/360,0.55,0.62).getStyle(); }
 // one deterministic, palette-consistent look per stable player id — used for BOTH your own
 // avatar (once joined) and the avatar everyone else builds for you, so what you see and what
@@ -3176,13 +3202,13 @@ function ensureRemote(p,state){ if(remote.has(p.id)) return;
 function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag); r.tag=makeLabel(name); r.tag.position.y=2.05; r.group.add(r.tag); r.name=name; }
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
 function setupRoom(){
-  const self=(room.players||[]).find(p=>p.isSelf); adoptMyId(self ? self.id : (room.me && room.me.id));  // colour our avatar by our network id
+  adoptMyId(room.me && room.me.id);  // colour our avatar by our network id
   const rl=document.getElementById('roomline'); rl.style.display='block';
   rl.onclick=()=>{ if(room&&room.link&&navigator.clipboard) navigator.clipboard.writeText(room.link).then(()=>toast('🔗 link copied!')); };
   updatePlayerCount();
-  room.onJoin(p=>{ if(!p.isSelf) toast('✨ a runner arrived'); updatePlayerCount(); });
+  room.onJoin(p=>{ if(!isSelfPlayer(p)) toast('✨ a runner arrived'); updatePlayerCount(); });
   room.onLeave(p=>{ removeRemote(p.id); toast('👋 a runner headed home'); updatePlayerCount(); refreshLeaderboard(); });
-  room.onPlayerState((p,state)=>{ if(p.isSelf){ adoptMyId(p.id); return; } ensureRemote(p,state); const r=remote.get(p.id);
+  room.onPlayerState((p,state)=>{ if(isSelfPlayer(p)){ adoptMyId(p.id); return; } ensureRemote(p,state); const r=remote.get(p.id);
     if(r){ r.target.pos.set(state.x||0,state.y||0,state.z||0); r.target.quat.set(state.qx||0,state.qy||0,state.qz||0,state.qw==null?1:state.qw);
       if(Number.isFinite(state.wp)) r.target.phase=state.wp;
       if(Number.isFinite(state.ad)) r.target.direction=state.ad<0?-1:1;
@@ -3197,7 +3223,7 @@ let _lbT=0;
 function refreshLeaderboardThrottled(){ const n=performance.now(); if(n-_lbT<1000) return; _lbT=n; refreshLeaderboard(); }
 function refreshLeaderboard(){ if(!room) return;
   const list=[{name:myName,score:score,me:true}];
-  for(const p of room.players){ if(p.isSelf) continue; const s=p.state||{}; list.push({name:s.n||'Guest',score:s.s||0,me:false}); }
+  for(const p of room.players){ if(isSelfPlayer(p)) continue; const s=p.state||{}; list.push({name:s.n||p.name||'Guest',score:s.s||0,me:false}); }
   list.sort((a,b)=>b.score-a.score);
   const ol=document.getElementById('lbList'); if(!ol) return; ol.innerHTML='';
   list.slice(0,8).forEach((e,i)=>{ const li=document.createElement('li'); if(e.me) li.className='me';
@@ -3211,7 +3237,7 @@ document.getElementById('btnLb').addEventListener('click',()=>{ lbOpen=!lbOpen;
 function trySubmitScore(){ refreshLeaderboard();
   if(!room||!room.submitScore) return; const now=performance.now();
   if(now-startTime<10500 || now-lastScoreSubmit<3000) return; lastScoreSubmit=now;
-  try{ room.submitScore(score).catch(()=>{}); }catch(e){} }
+  try{ room.submitScore(score).then(()=>refreshLeaderboard()).catch(()=>{}); }catch(e){} }
 
 // ---------------------------------------------------------------
 //  POST-PROCESS — ink outline (the signature Messenger cel look)
@@ -3319,7 +3345,7 @@ function animate(){
 function syncRemotes(){
   if(!room || !room.players) return;
   const seen=new Set();
-  for(const p of room.players){ if(p.isSelf) continue; const s=p.state||{}; if(typeof s.x!=='number') continue;
+  for(const p of room.players){ if(isSelfPlayer(p)) continue; const s=p.state||{}; if(typeof s.x!=='number') continue;
     seen.add(p.id); ensureRemote(p,s); const r=remote.get(p.id); if(!r) continue;
     r.target.pos.set(s.x,s.y,s.z); if(typeof s.qw==='number') r.target.quat.set(s.qx,s.qy,s.qz,s.qw);
     if(Number.isFinite(s.wp)) r.target.phase=s.wp;
@@ -3367,7 +3393,6 @@ document.getElementById('loader').style.display='none';
 if(isTouch()) touchEl.style.display='block';
 tw(document.body);                 // twemojify all static UI
 animate();
-initMultiplayer();                 // connect Antics rooms (solo if SDK absent)
 
 const beginBtn=document.getElementById('beginBtn');
 const SHOW_WELCOME_DURING_IMMERSION_QA=true;
@@ -3375,6 +3400,7 @@ beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
+  initMultiplayer();               // join only after the player chooses a leaderboard/display name
   camMode='street'; camPitch=0.11; camYaw=0; // swoop into the locked, authored street shot
   initAudio();
   newQuest();
