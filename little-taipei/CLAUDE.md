@@ -41,9 +41,10 @@ npm run deploy   # bundles the runtime files and uploads via antics-mcp
 
 `npm run deploy` runs [`deploy-antics.mjs`](deploy-antics.mjs), which:
 
-1. Reads the 10 runtime files the game needs at play time and bundles them into a
+1. Reads the 17 runtime files the game needs at play time and bundles them into a
    path→content map:
    `index.html`, `styles.css`, `main.js`, `taipei-landmarks.js`,
+   `character.js`, `accessories.js`, `accessories/{boba,easycard,tanghulu,bear,scooter-helmet}.js`,
    `buildings/{landmarks,markets,shops,transit}.js`, `city/{taipei,validate}.js`.
    (Everything else — plans, screenshots, `scripts/`, this file — is dev-only and is
    NOT uploaded. If you add a new runtime module, add it to the `FILES` array in

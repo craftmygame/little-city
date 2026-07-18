@@ -4,6 +4,12 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as LM from './taipei-landmarks.js';   // Taipei landmark models (local-space builders)
 import { TAIPEI_CITY as CITY } from './city/taipei.js';
 import { validateCity } from './city/validate.js';
+// The runner kids (look + motion + Taiwan accessories) live in their own module now.
+import { makeCharacter, createCharacterAnimator, MOTION,
+         SKIN, HAIRC, SHIRTS, PANTSC, CAPS, HAIRSTYLES } from './character.js';
+const MOTION_TAU = Math.PI * 2;
+// generic exponential damping (used by the player-speed filter in the game loop)
+const motionDamp=(a,b,rate,dt)=>a+(b-a)*(1-Math.exp(-rate*dt));
 
 validateCity(CITY, LM);
 
@@ -1646,407 +1652,10 @@ function buildTaipeiWorld(){
 buildTaipeiWorld();
 
 // ---------------------------------------------------------------
-//  CHARACTER FACTORY (player + NPCs share the build)
+//  CHARACTER FACTORY + MOTION — moved to ./character.js
+//  (makeCharacter, createCharacterAnimator, MOTION, palettes are imported at top).
+//  Taiwan accessories live in ./accessories.js + ./accessories/*.js.
 // ---------------------------------------------------------------
-/* ---- Runner palette arrays (NPCs vary by pick()-ing) -------- */
-const SKIN   = ['#ffd9b3', '#f7c79a', '#eab38a', '#d39c73', '#b87a4f', '#8a5a37'];
-const HAIRC  = ['#3a2a1d', '#5a3a22', '#23211f', '#7a4a26', '#9c6b3f', '#c9a86a', '#d9d2c7'];
-const SHIRTS = ['#e8746b', '#6fb0c9', '#9cc79a', '#e9c06a', '#b79ad6', '#ef9bb3', '#7d8fd6', '#f0a868'];
-const PANTSC = ['#5c6b80', '#7a6a58', '#4a5a52', '#8a6243', '#615b72', '#3f4a5c'];
-const CAPS   = ['#b56a63', '#5a7fa0', '#6a9678', '#c2a05a', '#8a7fb0', '#b57f95', '#4a5160'];  // muted — saturated accents stay with gameplay
-const HAIRSTYLES = ['mop', 'tuft', 'bob', 'buzz'];
-const CHARACTER_VISUAL_SCALE = 0.72;       // 2.42u source rig → ~1.75u human ruler
-
-// stylized young runner — human child proportions and expressive face
-function makeCharacter(opt = {}) {
-  const g = new THREE.Group();
-  const skin = opt.skin || pick(SKIN);
-  const hairC = opt.hair || pick(HAIRC);
-  const shirt = opt.shirt || pick(SHIRTS);
-  const pants = opt.pants || pick(PANTSC);
-  const capC = (typeof opt.cap === 'string') ? opt.cap : pick(CAPS);
-  const hairStyle = (typeof opt.hairStyle === 'string') ? opt.hairStyle : pick(HAIRSTYLES);
-  const wantCap = opt.cap !== false;
-  const mSkin=toon(skin), mShirt=toon(shirt), mSleeve=toon('#eeeadd'), mPants=toon(pants), mHair=toon(hairC);
-  const mCap=toon(capC), mCapDk=toon(new THREE.Color(capC).multiplyScalar(0.82));
-  const mShoe=toon('#eeeae0'), mSole=toon('#34383a');
-  const mWhite=toon('#ffffff'), mEyeWhite=toon('#f3ead9'), mEye=toon('#5a4033'), mBlush=toon('#d98f84'), mMouth=toon('#8e5049');
-  const add=(parent,geo,mat,x=0,y=0,z=0)=>{ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); m.castShadow=true; parent.add(m); return m; };
-
-  // The physics/presentation root stays rigid. Everything expressive lives
-  // below motionRoot so animation never leaks into collisions, labels or camera.
-  const motionRoot=new THREE.Group(); g.add(motionRoot);
-  const pelvis=new THREE.Group(); pelvis.position.y=1.16; motionRoot.add(pelvis);
-  const torso=new THREE.Group(); pelvis.add(torso);
-  const body=add(torso,faceted(new THREE.CylinderGeometry(0.31,0.245,0.58,14)),mShirt,0,0.30,0); body.scale.z=0.74;
-  const chest=add(torso,faceted(new THREE.SphereGeometry(0.305,14,10)),mShirt,0,0.54,0); chest.scale.set(1.04,0.46,0.73);
-  const hem=add(torso,faceted(new THREE.CylinderGeometry(0.25,0.245,0.12,12)),mPants,0,-0.015,0); hem.scale.z=0.78;
-  const collar=add(torso,faceted(new THREE.TorusGeometry(0.125,0.035,8,16)),mShirt,0,0.625,0.0); collar.rotation.x=Math.PI/2; collar.scale.set(1.0,0.86,0.72);
-
-  const neck=new THREE.Group(); neck.position.y=0.70; torso.add(neck);
-  add(neck,faceted(new THREE.CylinderGeometry(0.095,0.11,0.14,10)),mSkin,0,0.025,0);
-  const head=new THREE.Group(); head.position.y=0.105; head.scale.setScalar(0.60); neck.add(head);
-  const headM=add(head,faceted(new THREE.SphereGeometry(0.46,20,16)),mSkin,0,0.20,0); headM.scale.set(0.94,1.02,0.90);
-  const cheekMass=add(head,faceted(new THREE.SphereGeometry(0.285,14,10)),mSkin,0,0.055,0.075); cheekMass.scale.set(1.08,0.67,0.88);
-  add(head,faceted(new THREE.SphereGeometry(0.070,8,6)),mSkin,0.445,0.18,0.0).scale.set(0.68,1.0,0.78);
-  add(head,faceted(new THREE.SphereGeometry(0.070,8,6)),mSkin,-0.445,0.18,0.0).scale.set(0.68,1.0,0.78);
-  const FZ=0.445;
-  for(const sx of [-1,1]){
-    const ex=sx*0.15;
-    const eyeWhite=add(head,faceted(new THREE.SphereGeometry(0.054,11,8)),mEyeWhite,ex,0.218,FZ-0.016); eyeWhite.scale.set(1.04,0.72,0.44);
-    const pupil=add(head,faceted(new THREE.SphereGeometry(0.031,10,7)),mEye,ex+sx*0.003,0.217,FZ+0.020); pupil.scale.set(0.88,0.94,0.36);
-    add(head,new THREE.SphereGeometry(0.008,7,5),mWhite,ex+sx*0.007,0.228,FZ+0.043).scale.set(0.82,0.9,0.32);
-    const brow=add(head,faceted(new THREE.CapsuleGeometry(0.014,0.070,3,6)),mHair,ex,0.305,FZ+0.004);
-    brow.rotation.z=Math.PI/2-sx*0.09; brow.scale.set(1,1,0.70);
-  }
-  for(const sx of [-1,1]){ const b=add(head,new THREE.CircleGeometry(0.048,14),mBlush,sx*0.225,0.105,FZ-0.004); b.scale.set(1.0,0.62,1); }
-  const smile=add(head,new THREE.TorusGeometry(0.060,0.012,7,14,Math.PI*0.90),mMouth,0,0.068,FZ); smile.rotation.z=Math.PI; smile.rotation.x=-0.15; smile.scale.set(1.0,0.62,1);
-  add(head,faceted(new THREE.SphereGeometry(0.03,8,6)),mSkin,0,0.13,FZ+0.01).scale.set(1,0.8,0.8);
-  buildHair(head,hairStyle,mHair,add,wantCap);
-  if(wantCap){
-    const cap=new THREE.Group(); cap.position.set(0,0.34,-0.02); cap.rotation.x=-0.12; head.add(cap);
-    const dome=add(cap,faceted(new THREE.SphereGeometry(0.45,16,10,0,Math.PI*2,0,Math.PI*0.55)),mCap,0,0.0,0.0); dome.scale.set(1.0,0.92,1.0);
-    const band=add(cap,faceted(new THREE.TorusGeometry(0.435,0.045,8,18)),mCapDk,0,-0.02,0.0); band.rotation.x=Math.PI/2; band.scale.set(1.0,1.0,0.96);
-    const brim=add(cap,faceted(new THREE.CylinderGeometry(0.30,0.30,0.05,16,1,false,0,Math.PI)),mCapDk,0,-0.03,0.30); brim.rotation.x=0.18; brim.scale.set(1.05,1.0,1.45);
-    add(cap,faceted(new THREE.SphereGeometry(0.045,8,6)),mCap,0,0.235,0.0);
-  }
-  function makeArm(side){
-    const shoulder=new THREE.Group(); shoulder.position.set(side*0.31,0.49,0); shoulder.rotation.z=side*0.07; torso.add(shoulder);
-    add(shoulder,faceted(new THREE.CapsuleGeometry(0.098,0.17,5,9)),mSleeve,0,-0.16,0);
-    const cuff=add(shoulder,faceted(new THREE.TorusGeometry(0.088,0.026,7,13)),mShirt,0,-0.335,0); cuff.rotation.x=Math.PI/2; cuff.scale.z=0.72;
-    const elbow=new THREE.Group(); elbow.position.set(0,-0.355,0); shoulder.add(elbow);
-    const elbowCap=add(elbow,faceted(new THREE.SphereGeometry(0.072,10,8)),mSkin,0,-0.015,0); elbowCap.scale.set(0.96,0.86,0.92);
-    add(elbow,faceted(new THREE.CapsuleGeometry(0.066,0.235,5,9)),mSkin,0,-0.17,0);
-    const hand=new THREE.Group(); hand.position.set(0,-0.365,0.015); elbow.add(hand);
-    const handMesh=add(hand,faceted(new THREE.SphereGeometry(0.083,11,9)),mSkin); handMesh.scale.set(0.88,1.08,0.82);
-    return {shoulder,elbow,hand};
-  }
-  const leftArm=makeArm(-1), rightArm=makeArm(+1);
-  function makeLeg(side){
-    const hip=new THREE.Group(); hip.position.set(side*0.14,0.02,0); pelvis.add(hip);
-    const shorts=add(hip,faceted(new THREE.CapsuleGeometry(0.115,0.15,5,9)),mPants,0,-0.16,0); shorts.scale.set(1.0,1.0,0.84);
-    const pocket=add(hip,faceted(new THREE.BoxGeometry(0.065,0.16,0.11)),mPants,side*0.082,-0.16,0.015); pocket.rotation.z=-side*0.04;
-    const pcuff=add(hip,faceted(new THREE.TorusGeometry(0.102,0.026,7,13)),mPants,0,-0.315,0); pcuff.rotation.x=Math.PI/2; pcuff.scale.z=0.72;
-    add(hip,faceted(new THREE.CapsuleGeometry(0.080,0.18,5,9)),mSkin,0,-0.40,0);
-    const knee=new THREE.Group(); knee.position.set(0,-0.55,0); hip.add(knee);
-    const kneeCap=add(knee,faceted(new THREE.SphereGeometry(0.078,11,9)),mSkin,0,-0.01,0.004); kneeCap.scale.set(0.96,0.88,0.92);
-    add(knee,faceted(new THREE.CapsuleGeometry(0.073,0.29,5,9)),mSkin,0,-0.22,0);
-    const sock=add(knee,faceted(new THREE.CylinderGeometry(0.083,0.078,0.17,10)),mWhite,0,-0.405,0); sock.scale.z=0.92;
-    const ankle=new THREE.Group(); ankle.position.set(0,-0.50,0); knee.add(ankle);
-    const foot=new THREE.Group(); foot.position.set(0,-0.045,0.025); ankle.add(foot);
-    const heel=add(foot,faceted(new THREE.SphereGeometry(0.116,14,10)),mShoe,0,0,-0.015); heel.scale.set(0.90,0.60,1.02);
-    const heelSole=add(foot,faceted(new THREE.SphereGeometry(0.117,14,9,0,Math.PI*2,Math.PI*0.58,Math.PI*0.42)),mSole,0,-0.044,-0.005); heelSole.scale.set(0.92,0.52,1.04);
-    const toe=new THREE.Group(); toe.position.z=0.082; foot.add(toe);
-    const toeMesh=add(toe,faceted(new THREE.SphereGeometry(0.115,14,10)),mShoe,0,-0.004,0.075); toeMesh.scale.set(0.92,0.54,1.24);
-    const toeSole=add(toe,faceted(new THREE.SphereGeometry(0.116,14,9,0,Math.PI*2,Math.PI*0.58,Math.PI*0.42)),mSole,0,-0.046,0.075); toeSole.scale.set(0.94,0.48,1.25);
-    return {hip,knee,ankle,foot,toe};
-  }
-  const leftLeg=makeLeg(-1), rightLeg=makeLeg(+1);
-  // Keep presentation children (name tags, speech, emotes) on an unscaled root
-  // while every local/remote character shares the same human-size visual rig.
-  const root=new THREE.Group();
-  g.scale.setScalar(CHARACTER_VISUAL_SCALE);
-  root.add(g);
-  root.userData.parts={
-    visual:g,motionRoot,pelvis,torso,chest:torso,neck,head,
-    shoulderL:leftArm.shoulder,shoulderR:rightArm.shoulder,
-    elbowL:leftArm.elbow,elbowR:rightArm.elbow,handL:leftArm.hand,handR:rightArm.hand,
-    hipL:leftLeg.hip,hipR:rightLeg.hip,kneeL:leftLeg.knee,kneeR:rightLeg.knee,
-    ankleL:leftLeg.ankle,ankleR:rightLeg.ankle,footL:leftLeg.foot,footR:rightLeg.foot,
-    toeL:leftLeg.toe,toeR:rightLeg.toe,
-    // Compatibility aliases used by decorators and older debug hooks.
-    armL:leftArm.shoulder,armR:rightArm.shoulder,legL:leftLeg.hip,legR:rightLeg.hip
-  };
-  return root;
-}
-function buildHair(head, style, mHair, add, hasCap){
-  const hg=new THREE.Group(); hg.position.set(0,0.18,-0.02); head.add(hg);
-  // A shallow crown, not a full front-facing hemisphere. The old shell reached
-  // below the eyes and merged with them into a dark visor while exposing a bald
-  // strip above it. This crown follows the skull and stops at a natural hairline.
-  const base=add(hg,faceted(new THREE.SphereGeometry(0.485,16,12,0,Math.PI*2,0,Math.PI*0.40)),mHair,0,0.0,-0.005); base.scale.set(1.03,1.09,1.04);
-  if(style==='buzz'){ base.scale.set(1.01,1.015,1.015); return hg; }
-  if(style==='bob'){
-    const left=add(hg,faceted(new THREE.SphereGeometry(0.20,10,8)),mHair,-0.34,-0.04,0.01); left.scale.set(0.78,1.30,0.92);
-    const right=add(hg,faceted(new THREE.SphereGeometry(0.19,10,8)),mHair,0.35,-0.09,-0.01); right.scale.set(0.82,1.15,0.96);
-    const back=add(hg,faceted(new THREE.SphereGeometry(0.30,12,10)),mHair,-0.015,-0.08,-0.20); back.scale.set(1.14,1.18,0.70);
-    const flick=add(hg,faceted(new THREE.ConeGeometry(0.075,0.18,6)),mHair,0.28,-0.19,-0.13); flick.rotation.z=-0.45; flick.rotation.x=-0.22;
-    if(!hasCap){
-      const fringeL=add(hg,faceted(new THREE.SphereGeometry(0.105,9,7)),mHair,-0.105,0.165,0.395); fringeL.scale.set(1.65,0.64,0.54); fringeL.rotation.z=-0.22;
-      const fringeR=add(hg,faceted(new THREE.SphereGeometry(0.09,9,7)),mHair,0.125,0.19,0.40); fringeR.scale.set(1.42,0.58,0.52); fringeR.rotation.z=0.18;
-    }
-    return hg;
-  }
-  if(style==='tuft'){
-    const sprout=add(hg,faceted(new THREE.ConeGeometry(0.12,0.26,7)),mHair,0.05,0.34,-0.02); sprout.rotation.z=-0.35; sprout.rotation.x=-0.15;
-    for(const sx of [-1,1]){ const flick=add(hg,faceted(new THREE.ConeGeometry(0.07,0.16,6)),mHair,sx*0.30,0.14,-0.14); flick.rotation.z=sx*0.5; flick.rotation.x=-0.3; }
-    if(!hasCap) add(hg,faceted(new THREE.SphereGeometry(0.18,8,6)),mHair,0,0.10,0.32).scale.set(1.4,0.45,0.5);
-    return hg;
-  }
-  const backLayer=add(hg,faceted(new THREE.SphereGeometry(0.29,14,10)),mHair,0,-0.02,-0.22);
-  backLayer.scale.set(1.18,1.05,0.72);
-  const cluster=[[0.0,0.30,0.10,0.20],[-0.22,0.26,-0.02,0.17],[0.24,0.24,-0.04,0.17],[-0.15,0.18,0.28,0.15],[0.16,0.20,0.26,0.15],[0.0,0.16,-0.34,0.20],[-0.30,0.05,-0.18,0.16],[0.30,0.06,-0.18,0.16]];
-  for(const [x,y,z,r] of cluster){ add(hg,faceted(new THREE.SphereGeometry(r,9,7)),mHair,x,y,z).scale.set(1.05,0.92,1.05); }
-  if(!hasCap){ for(const sx of [-1,0,1]){ add(hg,faceted(new THREE.SphereGeometry(0.13,8,6)),mHair,sx*0.17,0.07,0.34).scale.set(1.0,0.7,0.6); } }
-  return hg;
-}
-
-// ---------------------------------------------------------------
-//  CHARACTER MOTION — articulated poses + responsive state layers
-// ---------------------------------------------------------------
-const MOTION_DEG=Math.PI/180, MOTION_TAU=Math.PI*2;
-const MOTION={
-  cycleSeconds:0.56,
-  strideDistance:2.2,
-  upperLeg:0.55,
-  lowerLeg:0.50,
-  stanceEnd:0.42,
-  startSeconds:0.15,
-  stopSeconds:0.20,
-  landSeconds:0.24,
-  // One leg over eight authored gait poses. The other samples half a cycle on.
-  hip:[-42,-22,4,28,31,10,-24,-44].map(v=>v*MOTION_DEG),
-  knee:[18,24,18,34,60,72,46,22].map(v=>v*MOTION_DEG),
-  ankle:[-9,-1,7,17,7,-5,-9,-12].map(v=>v*MOTION_DEG),
-  toe:[0,0,-3,-20,-8,0,0,0].map(v=>v*MOTION_DEG),
-  arm:[31,18,-5,-25,-30,-12,18,34].map(v=>v*MOTION_DEG),
-  elbow:[82,76,74,80,89,94,88,82].map(v=>v*MOTION_DEG),
-  pelvisY:[0,-0.034,0.014,0.045,0,-0.034,0.014,0.045],
-  pelvisX:[-0.006,-0.008,-0.003,0.003,0.006,0.008,0.003,-0.003],
-  pelvisRoll:[-0.8,-1.0,-0.4,0.4,0.8,1.0,0.4,-0.4].map(v=>v*MOTION_DEG),
-  pelvisYaw:[2,1.4,0,-1.4,-2,-1.4,0,1.4].map(v=>v*MOTION_DEG)
-};
-function motionSmooth(t){ t=THREE.MathUtils.clamp(t,0,1); return t*t*(3-2*t); }
-function motionDamp(a,b,rate,dt){ return a+(b-a)*(1-Math.exp(-rate*dt)); }
-function motionSample(values,phase){
-  const n=values.length, wrapped=((phase%1)+1)%1, x=wrapped*n;
-  const i=Math.floor(x)%n, t=x-Math.floor(x), t2=t*t, t3=t2*t;
-  const p0=values[(i+n-1)%n], p1=values[i], p2=values[(i+1)%n], p3=values[(i+2)%n];
-  return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3);
-}
-function motionSpring(s,target,dt,stiffness=72,damping=13,limit=0.24){
-  s.v+=(target-s.x)*stiffness*dt;
-  s.v*=Math.exp(-damping*dt);
-  s.x=THREE.MathUtils.clamp(s.x+s.v*dt,-limit,limit);
-  return s.x;
-}
-function motionSeed(value){
-  if(typeof value==='number') return value>>>0;
-  const str=String(value==null?'runner':value); let h=2166136261>>>0;
-  for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; }
-  return h>>>0;
-}
-function createCharacterAnimator(character,opt={}){
-  const p=character&&character.userData&&character.userData.parts;
-  if(!p||!p.motionRoot||!p.kneeL||!p.elbowL) return {phase:0,mode:'idle',update:()=>{}};
-  const maxSpeed=Math.max(0.1,opt.maxSpeed||3), intensity=opt.intensity==null?1:opt.intensity;
-  const strideDistance=Math.max(0.5,opt.strideDistance||MOTION.strideDistance);
-  let rng=motionSeed(opt.seed), phase=(opt.phase||0), mode='idle', stateTime=0;
-  let moveDirection=1, desiredDirection=1;
-  let filteredSpeed=0, filteredTurn=0, filteredAccel=0, previousSpeed=0;
-  let stopFrom=phase, stopAt=phase, contactSlot=Math.floor(phase/Math.PI);
-  let wasGrounded=true, idleTime=(rng%1000)/100, idleTimer=3.2, gestureTime=99, gestureDir=1;
-  let idleSideTarget=(rng&1)?1:-1, idleSide=idleSideTarget;
-  const headYaw={x:0,v:0}, bodyYaw={x:0,v:0};
-  const nodes=[p.motionRoot,p.pelvis,p.torso,p.neck,p.shoulderL,p.shoulderR,p.elbowL,p.elbowR,p.hipL,p.hipR,p.kneeL,p.kneeR,p.ankleL,p.ankleR,p.footL,p.footR,p.toeL,p.toeR].filter(Boolean);
-  const rests=nodes.map(node=>({node,pos:node.position.clone(),rot:node.rotation.clone()}));
-  const restByNode=new Map(rests.map(r=>[r.node,r]));
-  const plantL={active:false,age:0,anchor:new THREE.Vector3()}, plantR={active:false,age:0,anchor:new THREE.Vector3()};
-  const ikPoint=new THREE.Vector3();
-  const random=()=>{ rng=(Math.imul(rng,1664525)+1013904223)>>>0; return rng/4294967296; };
-  idleTimer=3+random()*4;
-  function restore(){ for(const r of rests){ r.node.position.copy(r.pos); r.node.rotation.copy(r.rot); } }
-  function enter(next){
-    if(mode===next) return;
-    mode=next; stateTime=0;
-    if(next==='stop'){
-      stopFrom=phase;
-      stopAt=Math.round(phase/Math.PI)*Math.PI;
-    }
-  }
-  function solvePlantedFoot(hip,knee,ankle,plant,legPhase,groundedNow,gaitBlend,dtStep){
-    if(!hip||!knee||!ankle) return;
-    const lp=((legPhase%1)+1)%1;
-    const locomotion=groundedNow&&(mode==='start'||mode==='run'||mode==='stop'||mode==='reverse')&&gaitBlend>0.06;
-    const inStance=locomotion&&lp<MOTION.stanceEnd;
-    if(!inStance){ plant.active=false; plant.age=0; return; }
-
-    // Capture the ankle in world space on contact, then solve the two rigid leg
-    // segments back to that point while the character root travels over it.
-    // This turns the authored pose into a planted step instead of a sliding one.
-    character.updateWorldMatrix(true,true);
-    if(!plant.active){
-      ankle.getWorldPosition(plant.anchor);
-      plant.active=true; plant.age=0;
-      return;
-    }
-    plant.age+=dtStep;
-    ikPoint.copy(plant.anchor);
-    p.pelvis.worldToLocal(ikPoint);
-    ikPoint.sub(hip.position);
-    const upper=MOTION.upperLeg, lower=MOTION.lowerLeg;
-    const rawDistance=Math.hypot(ikPoint.y,ikPoint.z);
-    const distance=THREE.MathUtils.clamp(rawDistance,Math.abs(upper-lower)+0.025,upper+lower-0.002);
-    const kneeTarget=Math.acos(THREE.MathUtils.clamp((distance*distance-upper*upper-lower*lower)/(2*upper*lower),-1,1));
-    const targetAngle=Math.atan2(-ikPoint.z,-ikPoint.y);
-    const hipOffset=Math.atan2(lower*Math.sin(kneeTarget),upper+lower*Math.cos(kneeTarget));
-    const hipTarget=targetAngle-hipOffset;
-    const exitStart=MOTION.stanceEnd-0.025;
-    const release=lp>exitStart?1-motionSmooth((lp-exitStart)/(MOTION.stanceEnd-exitStart)):1;
-    const stopReleaseStart=MOTION.stopSeconds*0.55;
-    const stopHold=mode==='stop'?1-motionSmooth((stateTime-stopReleaseStart)/(MOTION.stopSeconds-stopReleaseStart)):1;
-    const weight=motionSmooth(plant.age/0.014)*release*stopHold*Math.min(1,gaitBlend*1.35);
-    const hipRest=restByNode.get(hip).rot.x, kneeRest=restByNode.get(knee).rot.x, ankleRest=restByNode.get(ankle).rot.x;
-    // Keep the whole shoe level while planted. Sampling the authored ankle here
-    // rocked the sole around a fixed ankle and looked like horizontal skating.
-    const levelFoot=-(hipTarget+kneeTarget);
-    hip.rotation.x=THREE.MathUtils.lerp(hip.rotation.x,hipRest+hipTarget,weight);
-    knee.rotation.x=THREE.MathUtils.lerp(knee.rotation.x,kneeRest+kneeTarget,weight);
-    ankle.rotation.x=THREE.MathUtils.lerp(ankle.rotation.x,ankleRest+levelFoot,weight);
-  }
-  const api={phase,mode,speed:0};
-  api.update=(dt,signal={})=>{
-    dt=Math.min(Math.max(dt||0,0),0.05); if(dt<=0) return api;
-    const rawSpeed=Math.max(0,signal.speed||0), grounded=signal.grounded!==false;
-    const moving=grounded&&rawSpeed>maxSpeed*0.012;
-    const signalDirection=signal.direction<0?-1:1;
-    if(moving&&signalDirection!==desiredDirection){
-      desiredDirection=signalDirection;
-      if(mode==='run'||mode==='start') enter('reverse');
-    } else if(!moving) desiredDirection=signalDirection;
-    stateTime+=dt; idleTime+=dt;
-    if(!grounded){ if(mode!=='air') enter('air'); }
-    else if(signal.landed||(!wasGrounded&&grounded)) enter('land');
-    else if(mode==='air') enter('land');
-    else if(mode==='idle'&&moving) enter('start');
-    else if(mode==='start'&&stateTime>=MOTION.startSeconds) enter('run');
-    else if(mode==='run'&&!moving) enter('stop');
-    else if(mode==='reverse'&&!moving) enter('stop');
-    else if(mode==='reverse'&&stateTime>=0.22){ moveDirection=desiredDirection; enter('run'); }
-    else if(mode==='stop'&&moving) enter('start');
-    else if(mode==='stop'&&stateTime>=MOTION.stopSeconds) enter('idle');
-    else if(mode==='land'&&stateTime>=MOTION.landSeconds) enter(moving?'run':'idle');
-    wasGrounded=grounded;
-
-    const targetSpeed=THREE.MathUtils.clamp(rawSpeed/maxSpeed,0,1.25);
-    filteredSpeed=motionDamp(filteredSpeed,targetSpeed,moving?11:7,dt);
-    const accel=(filteredSpeed-previousSpeed)/Math.max(dt,1e-4); previousSpeed=filteredSpeed;
-    filteredAccel=motionDamp(filteredAccel,accel,9,dt);
-    filteredTurn=motionDamp(filteredTurn,signal.turnRate||0,10,dt);
-    const distance=Math.max(0,signal.distance||0);
-    if(mode==='start'&&stateTime<dt*1.5) moveDirection=desiredDirection;
-    const reverseProgress=mode==='reverse'?Math.min(1,stateTime/0.22):1;
-    const phaseDirection=mode==='reverse'&&reverseProgress<0.5?moveDirection:desiredDirection;
-    if(moving&&distance>0) phase+=phaseDirection*distance/strideDistance*MOTION_TAU;
-    if(Number.isFinite(signal.phase)){
-      const error=Math.atan2(Math.sin(signal.phase-phase),Math.cos(signal.phase-phase));
-      phase+=error*(1-Math.exp(-dt*5));
-    }
-    if(mode==='stop'){
-      const plant=motionSmooth(Math.min(1,stateTime/0.18));
-      phase=THREE.MathUtils.lerp(stopFrom,stopAt,plant);
-    }
-    const nextSlot=Math.floor((phase+1e-4)/Math.PI);
-    if(nextSlot!==contactSlot&&moving){ contactSlot=nextSlot; if(opt.onStep) opt.onStep(nextSlot&1); }
-
-    let gaitWeight=0;
-    if(mode==='start') gaitWeight=motionSmooth(stateTime/MOTION.startSeconds);
-    else if(mode==='run') gaitWeight=1;
-    else if(mode==='stop') gaitWeight=1-motionSmooth(stateTime/MOTION.stopSeconds);
-    else if(mode==='reverse') gaitWeight=Math.abs(reverseProgress*2-1);
-    gaitWeight*=THREE.MathUtils.lerp(0.18,1,motionSmooth(THREE.MathUtils.clamp(filteredSpeed,0,1)))*intensity;
-    const idleWeight=(mode==='idle'?1:((mode==='start'||mode==='stop'||mode==='reverse')?1-gaitWeight:0));
-    const turnN=THREE.MathUtils.clamp(filteredTurn/2.6,-1,1);
-
-    if(mode==='idle'){
-      idleTimer-=dt;
-      if(idleTimer<=0){
-        gestureTime=0; gestureDir=random()<0.5?-1:1;
-        if(random()<0.18) idleSideTarget*=-1;
-        idleTimer=3+random()*4.2;
-      }
-    }
-    gestureTime+=dt;
-    idleSide=motionDamp(idleSide,idleSideTarget,1.55,dt);
-    const gesture=gestureTime<1.55?Math.sin(Math.PI*gestureTime/1.55):0;
-    const breath=Math.sin(idleTime*1.65+(rng&255)*0.01);
-
-    restore();
-    const u=phase/MOTION_TAU;
-    const hipL=motionSample(MOTION.hip,u), hipR=motionSample(MOTION.hip,u+0.5);
-    const kneeL=motionSample(MOTION.knee,u), kneeR=motionSample(MOTION.knee,u+0.5);
-    const ankleL=motionSample(MOTION.ankle,u), ankleR=motionSample(MOTION.ankle,u+0.5);
-    const armL=motionSample(MOTION.arm,u), armR=motionSample(MOTION.arm,u+0.5);
-    p.hipL.rotation.x+=hipL*gaitWeight; p.hipR.rotation.x+=hipR*gaitWeight;
-    p.kneeL.rotation.x+=kneeL*gaitWeight; p.kneeR.rotation.x+=kneeR*gaitWeight;
-    p.ankleL.rotation.x+=ankleL*gaitWeight; p.ankleR.rotation.x+=ankleR*gaitWeight;
-    if(p.toeL) p.toeL.rotation.x+=motionSample(MOTION.toe,u)*gaitWeight;
-    if(p.toeR) p.toeR.rotation.x+=motionSample(MOTION.toe,u+0.5)*gaitWeight;
-    p.shoulderL.rotation.x+=armL*gaitWeight; p.shoulderR.rotation.x+=armR*gaitWeight*0.88;
-    p.shoulderL.rotation.y-=motionSample(MOTION.pelvisYaw,u)*0.16*gaitWeight;
-    p.shoulderR.rotation.y-=motionSample(MOTION.pelvisYaw,u+0.5)*0.13*gaitWeight;
-    p.elbowL.rotation.x-=MOTION_DEG*18*idleWeight+motionSample(MOTION.elbow,u)*gaitWeight;
-    p.elbowR.rotation.x-=MOTION_DEG*16*idleWeight+motionSample(MOTION.elbow,u+0.5)*gaitWeight*0.94;
-
-    p.pelvis.position.y+=motionSample(MOTION.pelvisY,u)*gaitWeight;
-    p.pelvis.position.x+=motionSample(MOTION.pelvisX,u)*gaitWeight;
-    p.pelvis.rotation.z+=motionSample(MOTION.pelvisRoll,u)*gaitWeight-turnN*MOTION_DEG*4.2*gaitWeight;
-    p.pelvis.rotation.y+=motionSample(MOTION.pelvisYaw,u)*gaitWeight;
-    p.motionRoot.rotation.y+=motionSpring(bodyYaw,-turnN*0.11,dt,72,14,0.14);
-    const chestPitch=(0.055+0.050*THREE.MathUtils.clamp(filteredSpeed,0,1)+THREE.MathUtils.clamp(filteredAccel*0.012,-0.025,0.04))*gaitWeight;
-    p.torso.rotation.x+=chestPitch;
-    p.torso.rotation.y-=motionSample(MOTION.pelvisYaw,u)*0.76*gaitWeight+turnN*MOTION_DEG*3.5;
-    p.torso.rotation.z-=motionSample(MOTION.pelvisRoll,u)*0.55*gaitWeight;
-
-    // A held, weight-bearing idle pose with occasional glances and transfers.
-    const leftRelax=(idleSide+1)*0.5, rightRelax=(1-idleSide)*0.5;
-    p.pelvis.position.x+=idleSide*0.050*idleWeight;
-    p.pelvis.position.y+=(0.004+breath*0.003)*idleWeight;
-    p.pelvis.rotation.z-=idleSide*MOTION_DEG*3.1*idleWeight;
-    p.torso.position.y+=(0.005+breath*0.004)*idleWeight;
-    p.torso.rotation.z+=idleSide*MOTION_DEG*3.7*idleWeight;
-    p.torso.rotation.x+=MOTION_DEG*(1.7+breath*0.32)*idleWeight;
-    p.hipL.rotation.z-=MOTION_DEG*5.5*leftRelax*idleWeight;
-    p.hipR.rotation.z+=MOTION_DEG*5.5*rightRelax*idleWeight;
-    p.hipL.rotation.y-=MOTION_DEG*9*leftRelax*idleWeight;
-    p.hipR.rotation.y+=MOTION_DEG*9*rightRelax*idleWeight;
-    p.kneeL.rotation.x+=MOTION_DEG*16*leftRelax*idleWeight;
-    p.kneeR.rotation.x+=MOTION_DEG*16*rightRelax*idleWeight;
-    p.ankleL.rotation.x-=MOTION_DEG*5*leftRelax*idleWeight;
-    p.ankleR.rotation.x-=MOTION_DEG*5*rightRelax*idleWeight;
-    if(p.footL) p.footL.rotation.y-=MOTION_DEG*(5+7*leftRelax)*idleWeight;
-    if(p.footR) p.footR.rotation.y+=MOTION_DEG*(5+7*rightRelax)*idleWeight;
-    p.shoulderL.rotation.z-=MOTION_DEG*2.2*rightRelax*idleWeight;
-    p.shoulderR.rotation.z+=MOTION_DEG*2.2*leftRelax*idleWeight;
-
-    const anticipation=mode==='start'?Math.sin(Math.PI*Math.min(1,stateTime/MOTION.startSeconds)):0;
-    const settle=mode==='stop'?Math.sin(Math.PI*Math.min(1,stateTime/MOTION.stopSeconds)):0;
-    const reverseTransfer=mode==='reverse'?Math.sin(Math.PI*reverseProgress):0;
-    const landing=mode==='land'?Math.sin(Math.PI*Math.min(1,stateTime/MOTION.landSeconds)):0;
-    p.pelvis.position.y-=0.042*anticipation+0.025*settle+0.045*reverseTransfer+0.075*landing;
-    p.torso.rotation.x+=0.11*anticipation+0.07*settle+0.08*reverseTransfer+0.08*landing;
-    p.kneeL.rotation.x+=0.12*anticipation+0.13*reverseTransfer+0.34*landing;
-    p.kneeR.rotation.x+=0.12*anticipation+0.13*reverseTransfer+0.34*landing;
-    if(mode==='air'){
-      const rise=THREE.MathUtils.clamp((signal.verticalSpeed||0)/9,-1,1);
-      p.hipL.rotation.x-=0.10+rise*0.04; p.hipR.rotation.x-=0.04-rise*0.04;
-      p.kneeL.rotation.x+=0.52; p.kneeR.rotation.x+=0.44;
-      p.shoulderL.rotation.x-=0.20; p.shoulderR.rotation.x-=0.20;
-      p.elbowL.rotation.x-=0.35; p.elbowR.rotation.x-=0.35;
-    }
-
-    solvePlantedFoot(p.hipL,p.kneeL,p.ankleL,plantL,u,grounded,gaitWeight,dt);
-    solvePlantedFoot(p.hipR,p.kneeR,p.ankleR,plantR,u+0.5,grounded,gaitWeight,dt);
-
-    const headTarget=-turnN*0.09+gestureDir*0.16*gesture*idleWeight;
-    p.neck.rotation.y+=motionSpring(headYaw,headTarget,dt,62,12,0.19);
-    p.neck.rotation.x-=chestPitch*0.34;
-    p.neck.rotation.z-=idleSide*MOTION_DEG*1.5*idleWeight;
-    api.phase=phase; api.mode=mode; api.speed=filteredSpeed;
-    return api;
-  };
-  return api;
-}
 
 // ---------------------------------------------------------------
 //  3D UI: speech bubbles & name tags (canvas sprites) + easing
@@ -2108,8 +1717,8 @@ const player = new THREE.Group(); scene.add(player);
 // colours can be reproduced on every other player's screen. It starts from a friendly
 // default and, once we join a room, is re-derived from our stable network id so it's
 // both unique per player AND identical in everyone's view (see setLocalAppearance / adoptMyId).
-let myAppearance = { shirt:'#3b9fb1', cap:false,
-                     skin:'#eab38a', hair:'#3b302b', pants:'#65705a', hairStyle:'mop' };
+let myAppearance = { shirt:'#3b9fb1', cap:false, raglan:true, accessory:'boba',
+                     skin:'#eab38a', hair:'#3b302b', pants:'#65705a', hairStyle:'fluffy' };
 let avatar = makeCharacter(myAppearance);
 let playerAnimator=null;
 player.add(avatar);
@@ -2256,7 +1865,12 @@ function buildNPCs(){
     if(!freeSpot(d,0.85)) continue;
     const name=NPC_NAMES[idx%NPC_NAMES.length];
     // half the neighbours go capless (hair shows), the rest wear a muted cap — no double hats
-    const g=makeCharacter({shirt:NPC_SHIRTS[idx%NPC_SHIRTS.length], cap:idx%2===0?false:pick(['#b56a63','#c2a05a','#6a9678','#5a7fa0','#cccccc','#b08968']), skin:pick(SKIN)});
+    // neighbours carry Taiwan accessories too (seeded pick() → same on every client)
+    const npcAcc=pick(['boba','easycard','tanghulu','bear','scooterHelmet',null,null]);
+    const npcHelmet=npcAcc==='scooterHelmet';
+    const g=makeCharacter({shirt:NPC_SHIRTS[idx%NPC_SHIRTS.length],
+      cap: npcHelmet?false:(idx%2===0?false:pick(['#b56a63','#c2a05a','#6a9678','#5a7fa0','#cccccc','#b08968'])),
+      skin:pick(SKIN), raglan:pick([true,false]), accessory:npcAcc});
     placeOnSurface(g,d,0,rand(0,6.28)); planetGroup.add(g);
     const mark=makeMarker(); mark.visible=false; g.add(mark); mark.position.y=2.85;
     const tag=makeLabel(name); tag.position.y=2.05; tag.visible=false; g.add(tag);
@@ -2870,12 +2484,21 @@ function colorFromId(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i+
 // one deterministic, palette-consistent look per stable player id — used for BOTH your own
 // avatar (once joined) and the avatar everyone else builds for you, so what you see and what
 // others see always match, while each player still gets a distinct look.
+// every player carries one Taiwan accessory (or none). Order matters only for
+// determinism — the same id always yields the same slot on every client.
+const ID_ACCESSORIES=['boba','easycard','tanghulu','bear','scooterHelmet',null,null,null];
 function appearanceFromId(id){
   const s=String(id);
   const hash=(salt)=>{ let h=2166136261>>>0; const str=salt+'|'+s; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; };
   const from=(arr,salt)=>arr[hash(salt)%arr.length];
+  const accessory=ID_ACCESSORIES[hash('acc')%ID_ACCESSORIES.length];
+  const helmet=accessory==='scooterHelmet';                 // a helmet is its own headgear…
   return { skin:from(SKIN,'sk'), hair:from(HAIRC,'ha'), hairStyle:from(HAIRSTYLES,'hs'),
-           shirt:from(SHIRTS,'sh'), pants:from(PANTSC,'pa'), cap:hash('capChance')%4===0?from(CAPS,'cp'):false };
+           shirt:from(SHIRTS,'sh'), pants:from(PANTSC,'pa'),
+           cap: (!helmet && hash('capChance')%4===0) ? from(CAPS,'cp') : false,  // …so no cap under it
+           raglan: hash('rag')%2===0,
+           headphones: !helmet && hash('hp')%5===0,          // and no headphones under it
+           accessory };
 }
 // re-skin our own avatar to match the id every other client will key off (idempotent)
 let myNetId=null;

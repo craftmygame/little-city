@@ -2,11 +2,29 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 
 const ROOT = new URL('./', import.meta.url);
+
+// Deploy under the "Tiny Planet Taipei 台北" project so the play URL is stable
+// (updates in place), rooms hold 16 players, and leaderboards persist. Requires a
+// one-time `npx antics-cli login`. Override with ANTICS_PROJECT= to target another
+// project, or ANTICS_PROJECT=none for a throwaway keyless deploy.
+const PROJECT_ENV = process.env.ANTICS_PROJECT;
+const PROJECT_ID =
+  PROJECT_ENV === 'none'
+    ? undefined
+    : PROJECT_ENV || '713da0a7-8a8f-4685-842d-8121c91953a8';
+
 const FILES = [
   'index.html',
   'styles.css',
   'main.js',
   'taipei-landmarks.js',
+  'character.js',
+  'accessories.js',
+  'accessories/boba.js',
+  'accessories/easycard.js',
+  'accessories/tanghulu.js',
+  'accessories/bear.js',
+  'accessories/scooter-helmet.js',
   'buildings/landmarks.js',
   'buildings/markets.js',
   'buildings/shops.js',
@@ -92,10 +110,13 @@ try {
     (total, content) => total + Buffer.byteLength(content),
     0,
   );
-  console.log(`Deploying ${deployment.name}: ${Object.keys(deployment.files).length} files, ${bytes} bytes`);
+  const target = PROJECT_ID ? `project ${PROJECT_ID}` : 'keyless (24h)';
+  console.log(`Deploying ${deployment.name} → ${target}: ${Object.keys(deployment.files).length} files, ${bytes} bytes`);
   const result = await request('tools/call', {
     name: 'deploy_game',
-    arguments: { files: deployment.files },
+    arguments: PROJECT_ID
+      ? { files: deployment.files, projectId: PROJECT_ID }
+      : { files: deployment.files },
   });
   if (result.isError) throw new Error(`${deployment.name}: ${deploymentText(result)}`);
   console.log(`${deployment.name}: ${deploymentText(result)}`);
