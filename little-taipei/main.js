@@ -1715,8 +1715,9 @@ function makeLabel(text){
 const player = new THREE.Group(); scene.add(player);
 // your avatar's look is a full appearance object — every colour pinned — so the SAME
 // colours can be reproduced on every other player's screen. It starts from a friendly
-// default and, once we join a room, is re-derived from our stable network id so it's
-// both unique per player AND identical in everyone's view (see setLocalAppearance / adoptMyId).
+// default and, the moment you pick a name at BEGIN, is re-derived from that name so it's
+// pinned BEFORE the character is ever shown and identical in everyone's view
+// (the name is broadcast, so remotes build the same look — see setLocalAppearance).
 let myAppearance = { shirt:'#3b9fb1', cap:false, raglan:true, accessory:'boba',
                      skin:'#eab38a', hair:'#3b302b', pants:'#65705a', hairStyle:'fluffy' };
 let avatar = makeCharacter(myAppearance);
@@ -2481,14 +2482,14 @@ async function initMultiplayer(){
 }
 function isSelfPlayer(p){ return !!(p && room && room.me && p.id===room.me.id); }
 function colorFromId(id){ let h=0; const s=String(id); for(let i=0;i<s.length;i++) h=(h*131+s.charCodeAt(i))%360; return new THREE.Color().setHSL(h/360,0.55,0.62).getStyle(); }
-// one deterministic, palette-consistent look per stable player id — used for BOTH your own
-// avatar (once joined) and the avatar everyone else builds for you, so what you see and what
-// others see always match, while each player still gets a distinct look.
+// one deterministic, palette-consistent look per display name — used for BOTH your own
+// avatar (pinned at BEGIN, before the street reveal) and the avatar everyone else builds
+// for you (keyed on your broadcast name), so what you see and what others see always match.
 // every player carries one Taiwan accessory (or none). Order matters only for
-// determinism — the same id always yields the same slot on every client.
+// determinism — the same name always yields the same slot on every client.
 const ID_ACCESSORIES=['boba','easycard','tanghulu','bear','scooterHelmet',null,null,null];
-function appearanceFromId(id){
-  const s=String(id);
+function appearanceFromName(name){
+  const s=String(name);
   const hash=(salt)=>{ let h=2166136261>>>0; const str=salt+'|'+s; for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; };
   const from=(arr,salt)=>arr[hash(salt)%arr.length];
   const accessory=ID_ACCESSORIES[hash('acc')%ID_ACCESSORIES.length];
@@ -2500,16 +2501,13 @@ function appearanceFromId(id){
            headphones: !helmet && hash('hp')%5===0,          // and no headphones under it
            accessory };
 }
-// re-skin our own avatar to match the id every other client will key off (idempotent)
-let myNetId=null;
-function adoptMyId(id){ if(id==null || id===myNetId) return; myNetId=id; setLocalAppearance(appearanceFromId(id)); }
 function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'), r=toon('#c2473b');
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.245,0.40,7),w));
   const st=new THREE.Mesh(new THREE.CylinderGeometry(0.252,0.252,0.06,7),r); st.position.y=0.04; g.add(st);
   const k=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),w); k.scale.set(1.1,0.7,1.1); k.position.y=0.27; g.add(k);
   g.scale.setScalar(0.78); g.position.set(0,1.02,0.34); g.traverse(o=>{if(o.isMesh)o.castShadow=true;}); return g; }
 function ensureRemote(p,state){ if(remote.has(p.id)) return;
-  const g=makeCharacter(appearanceFromId(p.id));   // exact look the owner sees for themselves (same id → same colours)
+  const g=makeCharacter(appearanceFromName(state.n||p.name||'Guest'));   // keyed on the owner's name → exact look they see for themselves (same on every client)
   // snap to the real spawn position immediately so they don't fly in from the planet centre
   if(typeof state.x==='number'){ g.position.set(state.x,state.y,state.z); if(typeof state.qw==='number') g.quaternion.set(state.qx,state.qy,state.qz,state.qw); }
   scene.add(g);
@@ -2527,13 +2525,13 @@ function ensureRemote(p,state){ if(remote.has(p.id)) return;
 function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag); r.tag=makeLabel(name); r.tag.position.y=2.05; r.group.add(r.tag); r.name=name; }
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
 function setupRoom(){
-  adoptMyId(room.me && room.me.id);  // colour our avatar by our network id
+  // our own look was already pinned from our name at BEGIN — nothing to re-skin on join
   const rl=document.getElementById('roomline'); rl.classList.add('on');
   rl.onclick=()=>{ if(room&&room.link&&navigator.clipboard) navigator.clipboard.writeText(room.link).then(()=>toast('🔗 link copied!')); };
   updatePlayerCount();
   room.onJoin(p=>{ if(!isSelfPlayer(p)) toast('✨ a runner arrived'); updatePlayerCount(); });
   room.onLeave(p=>{ removeRemote(p.id); toast('👋 a runner headed home'); updatePlayerCount(); refreshLeaderboard(); });
-  room.onPlayerState((p,state)=>{ if(isSelfPlayer(p)){ adoptMyId(p.id); return; } ensureRemote(p,state); const r=remote.get(p.id);
+  room.onPlayerState((p,state)=>{ if(isSelfPlayer(p)){ return; } ensureRemote(p,state); const r=remote.get(p.id);
     if(r){ r.target.pos.set(state.x||0,state.y||0,state.z||0); r.target.quat.set(state.qx||0,state.qy||0,state.qz||0,state.qw==null?1:state.qw);
       if(Number.isFinite(state.wp)) r.target.phase=state.wp;
       if(Number.isFinite(state.ad)) r.target.direction=state.ad<0?-1:1;
@@ -2728,6 +2726,7 @@ const beginBtn=document.getElementById('beginBtn');
 const SHOW_WELCOME_DURING_IMMERSION_QA=true;   // set false to skip the name screen while checking
 beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
+  setLocalAppearance(appearanceFromName(myName));   // pin the avatar's look from the chosen name BEFORE the street reveal — no post-join colour swap
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
   initMultiplayer();               // join only after the player chooses a leaderboard/display name
