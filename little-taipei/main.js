@@ -2298,7 +2298,7 @@ function newQuest(){
   sender.busy=true; sender.mark.visible=true;
   const free2=npcs.filter(n=>n!==sender && !n.busy);
   pendingRecipient=pick(free2); questItem=pick(PARCELS); recipient=null;
-  objIcon.textContent='📦';
+  objIcon.textContent='🧺';
   objText.textContent=`${sender.name} has ${questItem} ready — go grab it!`;
   tw(objEl);
   syncQuestToRoom();
@@ -2308,10 +2308,10 @@ function pickUp(){
   sender.mark.visible=false; sender.busy=false;
   showSpeech(sender.group, 'Thanks! 謝謝', 2.2, {emoji:'💛'});
   recipient=pendingRecipient; recipient.busy=true; recipient.mark.visible=true;
-  objIcon.textContent='📮';
+  objIcon.textContent='🛵';
   objText.textContent=`Run ${questItem} over to ${recipient.name}!`;
   tw(objEl);
-  sfxPickup(); toast('🛍️ '+cap(questItem));
+  sfxPickup(); toast('🧺 '+cap(questItem));
   syncQuestToRoom();
 }
 function deliver(){
@@ -2324,7 +2324,7 @@ function deliver(){
   const th=pick(THANKS);
   tossParcel(handPos, rpos.clone().addScaledVector(rUp,1.1), ()=>{ shockwave(rpos,'#ffe49a'); burst(rpos); sfxCatch(); showSpeech(_rg, th[0], 2.6, {emoji:th[1]}); });
   score++; const sv=document.getElementById('scoreVal'); sv.textContent=score; sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop');
-  camKick=0.7; sfxDeliver(); toast('⭐ Nice run! +1');
+  camKick=0.7; sfxDeliver(); toast('🥡 Nice run! +1');
   if(room) trySubmitScore();
   setTimeout(newQuest, 700);
   recipient=null; sender=null;
@@ -2749,8 +2749,8 @@ setupTouch();
 // prompt + toast helpers
 const promptEl=document.getElementById('prompt'), promptTxt=document.getElementById('promptTxt'), promptKey=document.getElementById('promptKey');
 let _lastPrompt='';
-function showPrompt(t){ const key=isTouch()?'✋':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); }
-function hidePrompt(){ promptEl.classList.remove('show'); }
+function showPrompt(t){ const key=isTouch()?'🤝':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); document.getElementById('btnAct').classList.add('ready'); }
+function hidePrompt(){ promptEl.classList.remove('show'); document.getElementById('btnAct').classList.remove('ready'); }
 const toastEl=document.getElementById('toast');
 let toastT=0;
 function toast(t){ toastEl.textContent=t; tw(toastEl); toastT=1.4; toastEl.style.transition='none'; toastEl.style.opacity=1; toastEl.style.transform='translate(-50%,-50%) scale(1.1)';
@@ -2760,7 +2760,7 @@ function updateToast(dt){ if(toastT>0){ toastT-=dt; if(toastT<=0){ toastEl.style
 // ---------------------------------------------------------------
 //  EMOTES
 // ---------------------------------------------------------------
-const EMOJIS=['👋','😀','❤️','👍','🎉','😮','😎','🙏','⭐'];
+const EMOJIS=['👋','😊','💛','🧋','🥟','🎉','😋','🙏','🌟'];
 const emoteBar=document.getElementById('emotes');
 EMOJIS.forEach(em=>{ const b=document.createElement('button'); b.textContent=em; b.onclick=()=>{ doEmote(em); toggleEmotes(false); }; emoteBar.appendChild(b); });
 let emotesOpen=false;
@@ -2831,10 +2831,16 @@ function sfxMeow(){ if(!audioOn) return; blip(680,0.13,'triangle',0.12); setTime
 function sfxVista(){ [659,784,988,1175].forEach((f,i)=>setTimeout(()=>blip(f,0.32,'sine',0.16),i*150)); }
 // the Taipei garbage-truck melody (Für Elise) — plays when you find the parked truck
 function sfxGarbage(){ [659,622,659,622,659,494,587,523,440].forEach((f,i)=>setTimeout(()=>blip(f,0.24,'triangle',0.14),i*200)); }
-document.getElementById('btnSound').addEventListener('click',()=>{ audioOn=!audioOn; if(master) master.gain.value=audioOn?0.5:0; document.getElementById('btnSound').textContent=audioOn?'🔊':'🔇'; });
+document.getElementById('btnSound').addEventListener('click',()=>{ audioOn=!audioOn; if(master) master.gain.value=audioOn?0.5:0; const ic=document.querySelector('#btnSound .ic'); ic.textContent=audioOn?'🎶':'🔇'; tw(ic); });
 
 // help button -> reopen intro-ish overlay (simple)
-document.getElementById('btnHelp').addEventListener('click',()=>{ alert('Tiny Planet Taipei 台北\n\nMove: WASD / Arrows (or joystick)\nLook: drag the screen\nHop: Space / JUMP\nInteract: E / Click / ✋\nEmotes: number keys 1-9 or 😀\n\nWalk around a miniature Taipei — Taipei 101, CKS Memorial, the Grand Hotel, Longshan Temple, the night markets, the Maokong gondola and more. Neighbours will ask you to run a bubble tea or a box of pineapple cake across town — lend a hand and keep everyone happy!'); });
+const helpOverlay=document.getElementById('helpOverlay');
+document.getElementById('btnHelp').addEventListener('click',()=>{ helpOverlay.classList.add('show'); document.body.classList.remove('menuOpen'); });
+document.getElementById('helpClose').addEventListener('click',()=>helpOverlay.classList.remove('show'));
+helpOverlay.addEventListener('pointerdown',e=>{ if(e.target===helpOverlay) helpOverlay.classList.remove('show'); });
+// the GitHub invite card retracts into a small pill once you've settled in
+setTimeout(()=>{ const g=document.getElementById('githubHelp');
+  g.classList.add('mini'); g.title='Help us make Taipei more realistic — improve a building and send a PR'; },12000);
 
 // ---------------------------------------------------------------
 //  MULTIPLAYER (Antics) — rooms, presence, emotes, live leaderboard
