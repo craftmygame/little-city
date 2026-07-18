@@ -1713,25 +1713,24 @@ function makeLabel(text){
 //  PLAYER
 // ---------------------------------------------------------------
 const player = new THREE.Group(); scene.add(player);
-// your avatar's look is a full appearance object — every colour pinned — so the SAME
-// colours can be reproduced on every other player's screen. It starts from a friendly
-// default and, the moment you pick a name at BEGIN, is re-derived from that name so it's
-// pinned BEFORE the character is ever shown and identical in everyone's view
-// (the name is broadcast, so remotes build the same look — see setLocalAppearance).
-let myAppearance = { shirt:'#3b9fb1', cap:false, raglan:true, accessory:'boba',
-                     skin:'#eab38a', hair:'#3b302b', pants:'#65705a', hairStyle:'fluffy' };
-let avatar = makeCharacter(myAppearance);
+// There is deliberately no placeholder avatar. The final, name-derived appearance is
+// created once at BEGIN, before gameplay is revealed, then reproduced by remote clients
+// from the same broadcast name. A placeholder here would be visible through the
+// translucent intro and make the final avatar look like a post-join colour swap.
+let myAppearance=null;
+let avatar=null;
 let playerAnimator=null;
-player.add(avatar);
 function localMotionSeed(ap){ return [ap.shirt,ap.pants,ap.skin,ap.hair,ap.hairStyle].join('|'); }
 function setLocalAppearance(ap){
   const previousPhase=playerAnimator?playerAnimator.phase:walkPhase;
-  myAppearance=ap; player.remove(avatar); avatar=makeCharacter(ap); player.add(avatar);
+  myAppearance=ap;
+  if(avatar) player.remove(avatar);
+  avatar=makeCharacter(ap); player.add(avatar);
   playerAnimator=createCharacterAnimator(avatar,{seed:localMotionSeed(ap),maxSpeed:MOVE,phase:previousPhase,onStep:sfxStep});
 }
 // grounded blob shadow — stays on the street during jumps, shrinks with height
 const playerShadow=new THREE.Mesh(blobShadowGeo, new THREE.MeshBasicMaterial({color:'#20302c',transparent:true,opacity:0.18,depthWrite:false}));
-playerShadow.scale.set(0.86,1,0.86); scene.add(playerShadow);
+playerShadow.scale.set(0.86,1,0.86); playerShadow.visible=false; scene.add(playerShadow);
 // little Taiwanese takeout bag carried (the red-&-white striped 塑膠袋, tied at the top; hidden until carrying)
 const parcel = new THREE.Group();
 {
@@ -1759,7 +1758,6 @@ let heading = new THREE.Vector3(0,0,1);             // tangent forward
 let alt=0, vVel=0, grounded=true;
 let walkPhase=0, curSpeed=0;
 const MOVE=3.9, TURN=2.6, GRAV=24.5, JUMP=9.0, FEET=0.0;
-playerAnimator=createCharacterAnimator(avatar,{seed:localMotionSeed(myAppearance),maxSpeed:MOVE,onStep:sfxStep});
 const _playerPrevDir=new THREE.Vector3(), _playerMovePrev=new THREE.Vector3(), _playerMoveRight=new THREE.Vector3();
 const _playerPrevHeading=new THREE.Vector3(), _playerTurnCross=new THREE.Vector3();
 // start at the Xinyi downtown edge, just SE of Taipei 101, on open city ground
@@ -2507,11 +2505,13 @@ function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'),
   const k=new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6),w); k.scale.set(1.1,0.7,1.1); k.position.y=0.27; g.add(k);
   g.scale.setScalar(0.78); g.position.set(0,1.02,0.34); g.traverse(o=>{if(o.isMesh)o.castShadow=true;}); return g; }
 function ensureRemote(p,state){ if(remote.has(p.id)) return;
-  const g=makeCharacter(appearanceFromName(state.n||p.name||'Guest'));   // keyed on the owner's name → exact look they see for themselves (same on every client)
+  const remoteName=String(state.n||p.name||'').trim();
+  if(!remoteName) return; // wait for identity state instead of flashing a temporary Guest look
+  const g=makeCharacter(appearanceFromName(remoteName));   // keyed on the owner's name → exact look they see for themselves (same on every client)
   // snap to the real spawn position immediately so they don't fly in from the planet centre
   if(typeof state.x==='number'){ g.position.set(state.x,state.y,state.z); if(typeof state.qw==='number') g.quaternion.set(state.qx,state.qy,state.qz,state.qw); }
   scene.add(g);
-  const tag=makeLabel(state.n||p.name||'Guest'); tag.position.y=2.05; g.add(tag);
+  const tag=makeLabel(remoteName); tag.position.y=2.05; g.add(tag);
   addBlobShadow(g,0.38);
   const par=remoteParcelMesh(); par.visible=false; g.add(par);
   const initialPhase=Number.isFinite(state.wp)?state.wp:0;
@@ -2520,7 +2520,7 @@ function ensureRemote(p,state){ if(remote.has(p.id)) return;
     target:{pos:g.position.clone(),quat:g.quaternion.clone(),phase:initialPhase,direction:state.ad<0?-1:1,
       grounded:state.ag==null?true:!!state.ag,verticalSpeed:Number.isFinite(state.av)?state.av:0}, wp:initialPhase,
     lastFacing:new THREE.Vector3(0,0,1).applyQuaternion(g.quaternion), motionForward:new THREE.Vector3(), motionUp:new THREE.Vector3(), motionCross:new THREE.Vector3(),
-    carry:false, score:0, name:state.n||''});
+    carry:false, score:0, name:remoteName});
 }
 function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag); r.tag=makeLabel(name); r.tag.position.y=2.05; r.group.add(r.tag); r.name=name; }
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
@@ -2726,7 +2726,8 @@ const beginBtn=document.getElementById('beginBtn');
 const SHOW_WELCOME_DURING_IMMERSION_QA=true;   // set false to skip the name screen while checking
 beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
-  setLocalAppearance(appearanceFromName(myName));   // pin the avatar's look from the chosen name BEFORE the street reveal — no post-join colour swap
+  setLocalAppearance(appearanceFromName(myName));   // create the final avatar before revealing the street
+  playerShadow.visible=true;
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
   initMultiplayer();               // join only after the player chooses a leaderboard/display name
