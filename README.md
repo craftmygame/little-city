@@ -28,17 +28,19 @@ lights up in an Antics deployment.
 The city is made of small, self-contained landmark models — a great fit for an AI agent and an
 easy first PR.
 
-1. **Pick something small:** a missing landmark, or a building that could look more real.
-2. **Write a builder** in [`little-taipei/taipei-landmarks.js`](little-taipei/taipei-landmarks.js).
-   Each one is a `build…(CTX)` function that returns a local-space `THREE.Group` (base at origin,
-   `+Y` up, front facing `+Z`) using the `CTX` helpers — `box`, `cyl`, `cone`, `sph`, `toon`, `group`.
-3. **Place it** in `little-taipei/index.html` with `placeLandmark(LM.buildYourThing, xkm, ykm, …)`,
-   where `xkm`/`ykm` are real kilometres east/north of Taipei 101.
+1. **Pick something small:** a missing landmark, a road or park correction, or a building that
+   could look more real.
+2. **Edit the city data** in [`little-taipei/city/taipei.js`](little-taipei/city/taipei.js). Roads,
+   parks, transit, landmarks and shops all use named, validated records with real kilometre
+   coordinates relative to Taipei 101.
+3. **Change building geometry** in the focused files under
+   [`little-taipei/buildings/`](little-taipei/buildings/). Each `build…(CTX)` function returns a
+   local-space group with its base at the origin, `+Y` up, and its entrance facing `+Z`.
+   [`little-taipei/CONTRIBUTING.md`](little-taipei/CONTRIBUTING.md) has copyable recipes.
 4. **Let an agent do it.** Open the repo in Claude Code or Codex and prompt:
-   > Look at how landmarks are built in `little-taipei/taipei-landmarks.js` and placed with
-   > `placeLandmark(...)` in `little-taipei/index.html`. Add the **Dragon Mountain / a new
-   > landmark** the same way, at its real km offset from Taipei 101, then serve with
-   > `python3 -m http.server` and confirm it renders without console errors.
+   > Follow `little-taipei/CONTRIBUTING.md`. Add the **Dragon Mountain / a new landmark** in the
+   > appropriate `buildings/` file, place it in `city/taipei.js`, run `npm run check`, then serve
+   > the city and confirm it renders without console errors.
 5. **Open a PR** with a screenshot. One landmark per PR is perfect.
 
 ## License
