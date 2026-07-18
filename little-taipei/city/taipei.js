@@ -7,6 +7,37 @@
  * Most city contributions should only touch this file. Building geometry lives
  * in ../taipei-landmarks.js; rendering and gameplay live in ../main.js.
  */
+const WALK_IN_STORE_WALLS = [
+  // Back wall.
+  ...[-2.1,-1.4,-0.7,0,0.7,1.4,2.1].map(x=>({x,z:-1.91,r:0.22})),
+  // Side walls.
+  ...[-1.55,-0.78,0,0.78,1.55].flatMap(z=>[
+    {x:-2.31,z,r:0.22}, {x:2.31,z,r:0.22},
+  ]),
+  // Front glass and jambs. The 1.8u gap between the middle pair is the door.
+  ...[-2.1,-1.5,-0.9,0.9,1.5,2.1].map(x=>({x,z:1.98,r:0.22})),
+];
+const SEVEN_ELEVEN_PLACEMENT = {
+  scale: 1.25,
+  foot: 4.2,
+  cols: WALK_IN_STORE_WALLS,
+  claim: 3.4,
+  colH: 3.6,
+  // The larger flat floor is sunk slightly so its far corners meet the curved basin.
+  extra: -0.15,
+  base: '#bdb7a8',
+};
+const FAMILY_MART_PLACEMENT = {
+  scale: 1.25,
+  foot: 4.2,
+  cols: WALK_IN_STORE_WALLS,
+  // Procedural blocks are placed later and honor this larger reservation.
+  claim: 4.6,
+  colH: 3.6,
+  extra: -0.15,
+  base: '#bdb7a8',
+};
+
 export const TAIPEI_CITY = {
   id: 'taipei',
   name: 'Little Taipei',
@@ -238,12 +269,12 @@ export const TAIPEI_CITY = {
   ],
 
   shops: [
-    { id: 'seven-eleven-xinyi', builder: 'buildSevenEleven', at: [0.8, -0.9], placement: { face: -25, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
-    { id: 'seven-eleven-nangang', builder: 'buildSevenEleven', at: [3.4, 0.2], placement: { face: 200, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
-    { id: 'seven-eleven-zhongshan', builder: 'buildSevenEleven', at: [-3.3, 1.2], placement: { face: 40, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
-    { id: 'familymart-songshan', builder: 'buildFamilyMart', at: [-1.2, 1.7], placement: { face: 15, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
-    { id: 'familymart-daan', builder: 'buildFamilyMart', at: [-2.0, -1.3], placement: { face: -60, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
-    { id: 'familymart-neihu', builder: 'buildFamilyMart', at: [0.5, 3.0], placement: { face: 120, scale: 1.25, ar: 1.5, claim: 1.4, colH: 2.5, extra: -0.05, base: '#bdb7a8' } },
+    { id: 'seven-eleven-xinyi', builder: 'buildSevenEleven', at: [0.8, -0.9], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: -25 } },
+    { id: 'seven-eleven-nangang', builder: 'buildSevenEleven', at: [3.4, 0.2], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: 200 } },
+    { id: 'seven-eleven-zhongshan', builder: 'buildSevenEleven', at: [-3.3, 1.2], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: 40 } },
+    { id: 'familymart-songshan', builder: 'buildFamilyMart', at: [-1.2, 1.7], placement: { ...FAMILY_MART_PLACEMENT, face: 15 } },
+    { id: 'familymart-daan', builder: 'buildFamilyMart', at: [-2.0, -1.3], placement: { ...FAMILY_MART_PLACEMENT, face: -60 } },
+    { id: 'familymart-neihu', builder: 'buildFamilyMart', at: [0.5, 3.0], placement: { ...FAMILY_MART_PLACEMENT, face: 120 } },
     { id: 'boba-xinyi', builder: 'buildBobaShop', at: [0.7, 1.4], placement: { face: -20, scale: 1.25, ar: 1.3, claim: 1.2, colH: 2.4, extra: -0.05, base: '#bdb7a8' } },
     { id: 'boba-zhongzheng', builder: 'buildBobaShop', at: [-3.7, -0.6], placement: { face: 70, scale: 1.25, ar: 1.3, claim: 1.2, colH: 2.4, extra: -0.05, base: '#bdb7a8' } },
     { id: 'breakfast-daan', builder: 'buildBreakfastShop', at: [-1.0, -2.3], placement: { face: 10, scale: 1.25, ar: 1.4, claim: 1.3, colH: 2.4, extra: -0.05, base: '#bdb7a8' } },

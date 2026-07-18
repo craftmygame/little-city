@@ -2,21 +2,24 @@
 //  TAIPEI SHOPS — small street-corner storefronts that make the city feel
 //  lived-in: the convenience stores on every block, a boba stand, a morning
 //  breakfast shop. Same local-space contract as the monuments (origin at
-//  base-centre on the ground, +Y up, FRONT faces +Z). Built small (~2 units).
+//  base-centre on the ground, +Y up, FRONT faces +Z). Most are compact;
+//  walk-in stores keep human-scale doors and aisles.
 // ---------------------------------------------------------------------
 
-// 7-ELEVEN — the corner store that's quite literally everywhere in Taipei
+// 7-ELEVEN — a full, walk-in neighbourhood store rather than a display kiosk.
 function buildSevenEleven(CTX){
-  const T = CTX.THREE; const g = CTX.group(); const A = m => (g.add(m), m);
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const W=4.8, D=4.0, HW=W/2, HD=D/2, wallH=2.55, frontZ=HD;
 
   // ---- palette (each material once, reused) -------------------------------
   const cream   = CTX.toon('#F4F1E8');
   const creamD  = CTX.toon('#DCD6C6');
-  const glass   = CTX.toon('#FFE4A8', { emissive:'#FFC862', emissiveIntensity:0.5 });   // warm interior glow
-  const inGlow  = CTX.toon('#FFE9C2', { emissive:'#FFD98A', emissiveIntensity:0.55 });   // lit back wall
+  const glass   = CTX.toon('#FFE4A8', { emissive:'#FFC862', emissiveIntensity:0.46 });
+  const doorG   = CTX.toon('#BFE2DE', { emissive:'#D8F0EA', emissiveIntensity:0.26 });
+  const inGlow  = CTX.toon('#FFE9C2', { emissive:'#FFD98A', emissiveIntensity:0.48 });
   const mull    = CTX.toon('#2B3036');
   const frameM  = CTX.toon('#C6CACE');
-  const white   = CTX.toon('#FBFAF4', { emissive:'#FFFFFF', emissiveIntensity:0.15 });   // sign field
+  const white   = CTX.toon('#FBFAF4', { emissive:'#FFFFFF', emissiveIntensity:0.15 });
   const green   = CTX.toon('#159A4B', { emissive:'#1BC25E', emissiveIntensity:0.7 });
   const orange  = CTX.toon('#F47C1B', { emissive:'#FF8E2A', emissiveIntensity:0.7 });
   const red     = CTX.toon('#E23B2E', { emissive:'#FF4A3A', emissiveIntensity:0.7 });
@@ -29,220 +32,216 @@ function buildSevenEleven(CTX){
   const binB    = CTX.toon('#2A6BB0');
   const bollard = CTX.toon('#D8352A');
   const shelfM  = CTX.toon('#D9CBA8');
+  const shelfD  = CTX.toon('#9B8763');
   const tire    = CTX.toon('#1A1A1E');
 
-  // ---- cream shell: U of solid walls (front + front-left corner are glass) -
-  A(CTX.box(2.40, 1.55, 0.18, cream, 0, 0.775, -0.91));   // back wall
-  A(CTX.box(0.18, 1.55, 2.00, cream, 1.11, 0.775,  0.00)); // right wall (full depth -> only one glass corner)
-  A(CTX.box(0.18, 1.55, 1.00, cream, -1.11, 0.775, -0.50)); // left wall, back half only
+  // ---- roomy shell, flat floor, and warm interior -------------------------
+  A(CTX.box(W, wallH, 0.18, cream, 0, wallH/2, -HD+0.09));
+  A(CTX.box(0.18, wallH, D, cream, -HW+0.09, wallH/2, 0));
+  A(CTX.box(0.18, wallH, D, cream,  HW-0.09, wallH/2, 0));
+  A(CTX.box(W-0.24, 0.06, D-0.24, creamD, 0, 0.03, 0));
+  A(CTX.box(W-0.42, 1.82, 0.04, inGlow, 0, 1.04, -HD+0.20));
 
-  // ---- lit interior (read through the glass) ------------------------------
-  A(CTX.box(2.10, 0.04, 1.92, creamD, 0, 0.02, -0.02));    // floor
-  A(CTX.box(2.00, 1.30, 0.04, inGlow, 0, 0.72, -0.80));    // glowing back wall
-  A(CTX.box(0.24, 0.92, 1.20, shelfM, -0.82, 0.46, -0.30)); // shelf rows
-  A(CTX.box(0.24, 0.92, 1.20, shelfM,  0.82, 0.46, -0.30));
-  A(CTX.box(0.42, 0.66, 1.00, shelfM, 0, 0.33, -0.05));     // centre gondola
-  [[-0.12,green],[ -0.04,orange],[0.05,red],[0.13,binB]].forEach((p,i)=>
-    A(CTX.box(0.1,0.12,0.7, p[1], p[0], 0.72, -0.05)));     // product blocks on gondola
+  // Refrigerators and shelves stay against the walls, leaving two broad aisles.
+  A(CTX.box(2.30, 1.66, 0.36, steelM, -0.82, 0.86, -HD+0.38));
+  for(const x of [-1.62,-1.08,-0.54,0]){
+    A(CTX.box(0.04,1.50,0.03,mull,x,0.88,-HD+0.18));
+    A(CTX.box(0.42,0.06,0.03,doorG,x+0.22,1.46,-HD+0.15));
+  }
+  A(CTX.box(0.38, 1.18, 2.30, shelfM, -HW+0.36, 0.59, -0.22));
+  for(const y of [0.28,0.58,0.88,1.16]) A(CTX.box(0.45,0.05,2.30,shelfD,-HW+0.38,y,-0.22));
 
-  // ---- front plate-glass storefront (+Z) + wrapped left corner (-X) --------
-  A(CTX.box(2.34, 1.10, 0.06, glass, 0, 0.60, 0.95));       // front glazing
-  A(CTX.box(0.06, 1.10, 0.95, glass, -1.18, 0.60, 0.48));   // corner glazing
-  // mullions on the front
-  [-1.05,-0.6,0.6,1.05].forEach(x => A(CTX.box(0.04,1.10,0.03, mull, x, 0.60, 0.99)));
-  A(CTX.box(2.34, 0.05, 0.03, mull,  0, 1.10, 0.99));        // front transom
-  A(CTX.box(2.40, 0.10, 0.07, frameM, 0, 0.06, 0.97));       // front sill
-  // mullions on the wrapped corner
-  [0.18,0.62].forEach(z => A(CTX.box(0.03,1.10,0.04, mull, -1.21, 0.60, z)));
-  A(CTX.box(0.03, 0.05, 0.95, mull, -1.21, 1.10, 0.48));     // corner transom
-  A(CTX.box(0.08, 0.10, 0.95, frameM, -1.18, 0.06, 0.48));   // corner sill
-  A(CTX.box(0.07, 1.16, 0.07, frameM, -1.18, 0.58, 0.95));   // vertical corner post
+  // Low centre gondola: products are readable from outside without closing the aisle.
+  A(CTX.box(0.62, 0.78, 1.56, shelfM, -0.75, 0.39, -0.36));
+  for(const y of [0.22,0.48,0.74]) A(CTX.box(0.78,0.05,1.62,shelfD,-0.75,y,-0.36));
+  const productCols=[green,orange,red,binB,white];
+  for(let i=0;i<5;i++) for(const z of [-0.84,-0.42,0,0.36])
+    A(CTX.box(0.11,0.15,0.16,productCols[i],-1.03+i*0.14,0.85,z));
 
-  // ---- sliding auto-doors (centred on front) ------------------------------
-  A(CTX.box(1.06, 1.46, 0.05, frameM, 0, 0.76, 0.97));
-  A(CTX.box(0.98, 1.38, 0.04, glass,  0, 0.74, 0.995));
-  A(CTX.box(0.03, 1.38, 0.05, mull,   0, 0.74, 1.01));       // centre seam
-  [-0.11,0.11].forEach(x => A(CTX.box(0.02,0.42,0.05, darkM, x, 0.72, 1.02))); // handles
-  A(CTX.box(1.10, 0.03, 0.40, mull, 0, 0.015, 1.18));        // entry mat
+  // Checkout sits in the back-right corner; the centre line from the door stays clear.
+  A(CTX.box(1.42, 0.80, 0.62, shelfM, 1.36, 0.40, -1.22));
+  A(CTX.box(1.52, 0.08, 0.70, shelfD, 1.36, 0.84, -1.22));
+  A(CTX.box(0.30, 0.30, 0.24, darkM, 1.64, 1.03, -1.18));
+  A(CTX.box(0.22, 0.05, 0.18, green, 1.64, 1.20, -1.17));
+  A(CTX.cyl(0.08,0.08,0.24,orange,0.95,0.98,-1.17,10));
 
-  // ---- canopy lip below the sign band -------------------------------------
-  A(CTX.box(2.50, 0.06, 0.18, creamD, 0, 1.16, 1.04));
-  A(CTX.box(0.18, 0.06, 1.00, creamD, -1.27, 1.16, 0.47));
+  // Ceiling light bars make the interior legible once the player is inside.
+  for(const x of [-1.25,0,1.25]) A(CTX.box(0.72,0.04,0.18,white,x,2.45,-0.25));
 
-  // ---- THE SIGNATURE: green/orange/red tri-stripe fascia ------------------
-  // front field + stripes (y 1.15..1.55)
-  A(CTX.box(2.46, 0.40, 0.10, white, 0, 1.35, 0.96));
-  A(CTX.box(2.46, 0.09, 0.04, green,  0, 1.46, 1.02));
-  A(CTX.box(2.46, 0.09, 0.04, orange, 0, 1.35, 1.02));
-  A(CTX.box(2.46, 0.09, 0.04, red,    0, 1.24, 1.02));
-  // wrap the band onto the corner so it reads from the side street
-  A(CTX.box(0.10, 0.40, 1.00, white, -1.20, 1.35, 0.47));
-  A(CTX.box(0.04, 0.09, 1.00, green,  -1.26, 1.46, 0.47));
-  A(CTX.box(0.04, 0.09, 1.00, orange, -1.26, 1.35, 0.47));
-  A(CTX.box(0.04, 0.09, 1.00, red,    -1.26, 1.24, 0.47));
+  // ---- storefront: two window bays and a genuinely open 1.3u doorway -----
+  for(const x of [-1.53,1.53]) A(CTX.box(1.70,1.64,0.06,glass,x,0.88,frontZ));
+  for(const x of [-2.36,-1.53,-0.69,0.69,1.53,2.36]) A(CTX.box(0.05,1.72,0.05,mull,x,0.88,frontZ+0.04));
+  for(const x of [-1.53,1.53]){
+    A(CTX.box(1.70,0.05,0.04,mull,x,1.34,frontZ+0.05));
+    A(CTX.box(1.70,0.10,0.08,frameM,x,0.06,frontZ+0.01));
+  }
+  A(CTX.box(1.42,0.12,0.10,mull,0,1.72,frontZ+0.03));
+  for(const x of [-0.70,0.70]) A(CTX.box(0.06,1.72,0.08,frameM,x,0.86,frontZ+0.03));
+  // The auto-door leaves are slid aside, so there is no mesh or collider across the portal.
+  for(const x of [-0.97,0.97]){
+    A(CTX.box(0.48,1.58,0.04,doorG,x,0.84,frontZ+0.08));
+    A(CTX.box(0.04,1.58,0.05,mull,x+(x<0?0.22:-0.22),0.84,frontZ+0.11));
+  }
+  A(CTX.box(1.30,0.025,0.72,darkM,0,0.013,frontZ+0.30));
 
-  // ---- flat roof, parapet, deck -------------------------------------------
-  A(CTX.box(2.50, 0.14, 0.12, parM, 0, 1.62, 0.96));
-  A(CTX.box(2.50, 0.14, 0.20, parM, 0, 1.62, -0.92));
-  A(CTX.box(0.14, 0.14, 2.10, parM, -1.19, 1.62, 0));
-  A(CTX.box(0.14, 0.14, 2.10, parM,  1.19, 1.62, 0));
-  A(CTX.box(2.30, 0.06, 1.92, roofM, 0, 1.56, -0.02));       // deck (top at 1.59)
+  // ---- wraparound signature fascia ---------------------------------------
+  A(CTX.box(W+0.10,0.08,0.28,creamD,0,1.82,frontZ+0.10));
+  A(CTX.box(W+0.04,0.58,0.10,white,0,2.13,frontZ+0.02));
+  for(const [y,mat] of [[2.31,green],[2.13,orange],[1.95,red]]) A(CTX.box(W+0.06,0.12,0.04,mat,0,y,frontZ+0.08));
+  for(const sx of [-1,1]){
+    A(CTX.box(0.10,0.58,D,white,sx*HW,2.13,0));
+    for(const [y,mat] of [[2.31,green],[2.13,orange],[1.95,red]]) A(CTX.box(0.04,0.12,D,mat,sx*(HW+0.06),y,0));
+  }
 
-  // ---- rooftop machinery --------------------------------------------------
-  A(CTX.box(0.44, 0.26, 0.36, metal, 0.55, 1.72, 0.10));     // AC condenser 1
-  A(CTX.cyl(0.12, 0.12, 0.04, darkM, 0.55, 1.85, 0.10, 12));
-  A(CTX.box(0.34, 0.22, 0.30, metal, 0.62, 1.70, -0.55));    // AC condenser 2
-  A(CTX.cyl(0.10, 0.10, 0.04, darkM, 0.62, 1.81, -0.55, 12));
-  A(CTX.cyl(0.05, 0.05, 0.30, metal, 0.15, 1.74, -0.78, 8)); // vent pipe
-  // stainless water tank
-  A(CTX.box(0.34, 0.04, 0.34, darkM, -0.55, 1.61, -0.50));
-  A(CTX.cyl(0.24, 0.26, 0.40, steelM, -0.55, 1.83, -0.50, 12));
-  A(CTX.cyl(0.245,0.245,0.03, darkM, -0.55, 1.92, -0.50, 12));
-  const dome = CTX.sph(0.24, steelM, -0.55, 2.03, -0.50, 10); dome.scale.set(1,0.5,1); A(dome);
+  // ---- flat roof, parapet, and Taipei rooftop machinery ------------------
+  A(CTX.box(W,0.08,D,roofM,0,2.55,0));
+  A(CTX.box(W+0.12,0.16,0.12,parM,0,2.66, HD-0.06));
+  A(CTX.box(W+0.12,0.16,0.12,parM,0,2.66,-HD+0.06));
+  for(const sx of [-1,1]) A(CTX.box(0.12,0.16,D,parM,sx*(HW+0.02),2.66,0));
+  A(CTX.box(0.62,0.34,0.48,metal,0.82,2.78,-0.18));
+  A(CTX.cyl(0.17,0.17,0.04,darkM,0.82,2.96,-0.18,12));
+  A(CTX.box(0.46,0.28,0.40,metal,1.45,2.75,-0.82));
+  A(CTX.cyl(0.30,0.32,0.54,steelM,-0.86,2.96,-0.78,14));
+  const dome=CTX.sph(0.30,steelM,-0.86,3.24,-0.78,12); dome.scale.set(1,0.48,1); A(dome);
 
-  // ---- projecting rooftop blade sign (double-sided, reads down the street) -
-  A(CTX.cyl(0.035, 0.035, 0.40, metal, -1.05, 1.78, 0.60, 8));
-  A(CTX.box(0.12, 0.40, 0.70, white, -1.05, 2.00, 0.60));
-  [-0.065, 0.065].forEach(o => {           // stripes on both broad faces (+X / -X)
-    A(CTX.box(0.04, 0.10, 0.70, green,  -1.05 + o, 2.11, 0.60));
-    A(CTX.box(0.04, 0.10, 0.70, orange, -1.05 + o, 2.00, 0.60));
-    A(CTX.box(0.04, 0.10, 0.70, red,    -1.05 + o, 1.89, 0.60));
-  });
+  // Projecting blade sign reads down the side street.
+  A(CTX.cyl(0.04,0.04,0.48,metal,-2.12,2.88,1.08,8));
+  A(CTX.box(0.14,0.58,0.88,white,-2.12,3.20,1.08));
+  for(const o of [-0.08,0.08]) for(const [y,mat] of [[3.38,green],[3.20,orange],[3.02,red]])
+    A(CTX.box(0.04,0.13,0.88,mat,-2.12+o,y,1.08));
 
-  // ---- street life near the door ------------------------------------------
-  // ice-cream / freezer chest (right of door)
-  A(CTX.box(0.62, 0.42, 0.36, creamD, 0.80, 0.21, 1.26));
-  A(CTX.box(0.54, 0.06, 0.30, glass,  0.80, 0.45, 1.26));
-  A(CTX.box(0.62, 0.10, 0.02, red,    0.80, 0.12, 1.45));
-  // recycle bins (left of door)
-  A(CTX.cyl(0.13, 0.11, 0.40, binG, -0.78, 0.20, 1.24, 10));
-  A(CTX.cyl(0.14, 0.14, 0.05, darkM, -0.78, 0.42, 1.24, 10));
-  A(CTX.cyl(0.13, 0.11, 0.40, binB, -1.02, 0.20, 1.30, 10));
-  A(CTX.cyl(0.14, 0.14, 0.05, darkM, -1.02, 0.42, 1.30, 10));
-  // red bollards along the kerb
-  [-1.05, -0.62, 0.62, 1.05].forEach(x => {
-    A(CTX.cyl(0.06, 0.075, 0.30, bollard, x, 0.15, 1.12, 8));
-    A(CTX.cyl(0.062,0.062,0.05, white,    x, 0.25, 1.12, 8));
-    A(CTX.sph(0.06, bollard, x, 0.31, 1.12, 8));
-  });
-  // cheap parked scooter hint (front-right kerb)
-  A(CTX.box(0.66, 0.16, 0.20, binB, 1.02, 0.30, 1.62));
-  A(CTX.box(0.26, 0.10, 0.18, darkM, 1.14, 0.42, 1.62));
-  A(CTX.box(0.08, 0.40, 0.08, darkM, 0.70, 0.50, 1.62));
-  A(CTX.box(0.08, 0.06, 0.32, darkM, 0.70, 0.68, 1.62));
-  A(CTX.cyl(0.05, 0.05, 0.05, white, 0.66, 0.50, 1.62, 8));
-  [0.72, 1.34].forEach(x => { const w = CTX.cyl(0.13,0.13,0.07, tire, x, 0.13, 1.62, 12); w.rotation.x = Math.PI/2; A(w); });
+  // ---- street furniture is kept to the window bays, never the doorway ----
+  A(CTX.box(0.86,0.54,0.44,creamD,1.64,0.27,2.34));
+  A(CTX.box(0.76,0.07,0.36,glass,1.64,0.58,2.34));
+  A(CTX.box(0.86,0.11,0.03,red,1.64,0.15,2.57));
+  for(const [x,mat] of [[-1.48,binG],[-1.84,binB]]){
+    A(CTX.cyl(0.17,0.15,0.50,mat,x,0.25,2.30,10));
+    A(CTX.cyl(0.18,0.18,0.06,darkM,x,0.53,2.30,10));
+  }
+  for(const x of [-2.20,2.20]){
+    A(CTX.cyl(0.07,0.085,0.38,bollard,x,0.19,2.22,8));
+    A(CTX.cyl(0.072,0.072,0.06,white,x,0.30,2.22,8));
+    A(CTX.sph(0.07,bollard,x,0.40,2.22,8));
+  }
+
+  // Park the scooter around the right-hand corner instead of across the doors.
+  A(CTX.box(0.76,0.18,0.22,binB,2.82,0.31,0.62));
+  A(CTX.box(0.30,0.11,0.20,darkM,2.94,0.44,0.62));
+  A(CTX.box(0.08,0.46,0.08,darkM,2.50,0.53,0.62));
+  A(CTX.box(0.08,0.06,0.38,darkM,2.50,0.74,0.62));
+  A(CTX.cyl(0.06,0.06,0.05,white,2.46,0.55,0.62,8));
+  for(const x of [2.50,3.15]){ const w=CTX.cyl(0.15,0.15,0.08,tire,x,0.15,0.62,12); w.rotation.x=Math.PI/2; A(w); }
 
   return g;
 }
 
-// FAMILYMART (全家) — the green/blue rival on the next corner, with eat-in seating
+// FAMILYMART (全家) — a full walk-in store with its familiar eat-in counter.
 function buildFamilyMart(CTX){
   const g = CTX.group(); const A = m => (g.add(m), m);
+  const W=4.8, D=4.0, HW=W/2, HD=D/2, wallH=2.55, frontZ=HD;
 
-  // --- palette (each material allocated once) ---
-  const wallM      = CTX.toon('#F4F1E8');                                   // cream-white body
-  const roofM      = CTX.toon('#D7D2C5');                                   // roof slab / parapet
-  const glassM     = CTX.toon('#FFD98F', { emissive:'#FFC25A', emissiveIntensity:0.5 });  // warm interior glow
-  const doorGlassM = CTX.toon('#BFE6E6', { emissive:'#D6F0F0', emissiveIntensity:0.3 });  // cooler auto-door glass
-  const mullionM   = CTX.toon('#33373B');                                   // dark mullions / frames
-  const greenM     = CTX.toon('#19A64A', { emissive:'#13A043', emissiveIntensity:0.6 });  // FamilyMart green band
-  const blueM      = CTX.toon('#0C63B6', { emissive:'#0A5BAC', emissiveIntensity:0.6 });  // FamilyMart blue band
-  const signWhiteM = CTX.toon('#FCFBF6', { emissive:'#FFFFFF', emissiveIntensity:0.14 }); // glowing white sign field
-  const metalM     = CTX.toon('#9097A0');                                   // poles / AC / legs
-  const tankM      = CTX.toon('#C7CCD2');                                   // stainless water tank
-  const baseTrimM  = CTX.toon('#565B60');                                   // kickplate / mat
-  const counterM   = CTX.toon('#CBAE80');                                   // eat-in counter wood
-  const stoolM     = CTX.toon('#D44A3B');                                   // pop-of-colour stool seats
+  // ---- palette ------------------------------------------------------------
+  const wallM      = CTX.toon('#F4F1E8');
+  const wallDM     = CTX.toon('#D7D2C5');
+  const glassM     = CTX.toon('#FFD98F', { emissive:'#FFC25A', emissiveIntensity:0.46 });
+  const doorGlassM = CTX.toon('#BFE6E6', { emissive:'#D6F0F0', emissiveIntensity:0.3 });
+  const interiorM  = CTX.toon('#FFF0C8', { emissive:'#FFD788', emissiveIntensity:0.42 });
+  const mullionM   = CTX.toon('#33373B');
+  const greenM     = CTX.toon('#19A64A', { emissive:'#13A043', emissiveIntensity:0.6 });
+  const blueM      = CTX.toon('#0C63B6', { emissive:'#0A5BAC', emissiveIntensity:0.6 });
+  const signWhiteM = CTX.toon('#FCFBF6', { emissive:'#FFFFFF', emissiveIntensity:0.14 });
+  const metalM     = CTX.toon('#9097A0');
+  const tankM      = CTX.toon('#C7CCD2');
+  const baseTrimM  = CTX.toon('#565B60');
+  const counterM   = CTX.toon('#CBAE80');
+  const shelfM     = CTX.toon('#DDD1B5');
+  const shelfDM    = CTX.toon('#9D8965');
+  const stoolM     = CTX.toon('#D44A3B');
 
-  // ===== building mass (white box: supplies back + side walls) =====
-  A(CTX.box(2.40, 1.50, 1.90, wallM, 0, 0.75, -0.05));     // front solid face sits at z=0.90
-  A(CTX.box(2.54, 0.10, 2.06, roofM, 0, 1.55, -0.05));     // flat roof slab (overhang)
-  // slim corner pilasters framing the storefront
-  A(CTX.box(0.16, 1.42, 0.10, wallM, -1.13, 0.71, 0.94));
-  A(CTX.box(0.16, 1.42, 0.10, wallM,  1.13, 0.71, 0.94));
+  // ---- roomy shell and thin walkable floor -------------------------------
+  A(CTX.box(W,wallH,0.18,wallM,0,wallH/2,-HD+0.09));
+  A(CTX.box(0.18,wallH,D,wallM,-HW+0.09,wallH/2,0));
+  A(CTX.box(0.18,wallH,D,wallM, HW-0.09,wallH/2,0));
+  A(CTX.box(W-0.24,0.06,D-0.24,wallDM,0,0.03,0));
+  A(CTX.box(W-0.42,1.82,0.04,interiorM,0,1.04,-HD+0.20));
 
-  // ===== plate-glass storefront across the FRONT (+Z) =====
-  A(CTX.box(2.42, 0.12, 0.10, baseTrimM, 0, 0.06, 0.96));  // kickplate under glass
-  // mullion grid for one window (à la buildCityHall panel)
-  const winFrame = (w, h, cx, cy, cz) => {
-    const cols = Math.max(2, Math.round(w / 0.34));
-    for (let i = 0; i <= cols; i++) A(CTX.box(0.04, h, 0.03, mullionM, cx - w/2 + w*i/cols, cy, cz + 0.02));
-    A(CTX.box(w, 0.04, 0.03, mullionM, cx, cy - h/2, cz + 0.02));
-    A(CTX.box(w, 0.04, 0.03, mullionM, cx, cy + h/2, cz + 0.02));
-    A(CTX.box(w, 0.04, 0.03, mullionM, cx, cy,       cz + 0.02));  // mid transom
-  };
-  A(CTX.box(0.66, 1.00, 0.05, glassM, -0.70, 0.62, 0.96)); winFrame(0.66, 1.00, -0.70, 0.62, 0.96); // left window
-  A(CTX.box(0.66, 1.00, 0.05, glassM,  0.70, 0.62, 0.96)); winFrame(0.66, 1.00,  0.70, 0.62, 0.96); // right window
+  // Chillers, grocery shelving, and a checkout frame two broad interior aisles.
+  A(CTX.box(2.34,1.66,0.36,tankM,-0.78,0.86,-HD+0.38));
+  for(const x of [-1.58,-1.04,-0.50,0.04]){
+    A(CTX.box(0.04,1.50,0.03,mullionM,x,0.88,-HD+0.18));
+    A(CTX.box(0.42,0.06,0.03,doorGlassM,x+0.22,1.46,-HD+0.15));
+  }
+  A(CTX.box(0.38,1.16,2.16,shelfM,HW-0.36,0.58,-0.30));
+  for(const y of [0.28,0.57,0.86,1.14]) A(CTX.box(0.45,0.05,2.16,shelfDM,HW-0.38,y,-0.30));
+  A(CTX.box(0.62,0.78,1.56,shelfM,0.72,0.39,-0.34));
+  for(const y of [0.22,0.48,0.74]) A(CTX.box(0.78,0.05,1.62,shelfDM,0.72,y,-0.34));
+  for(let i=0;i<5;i++) for(const z of [-0.82,-0.40,0.02,0.38])
+    A(CTX.box(0.11,0.15,0.16,[greenM,blueM,stoolM,signWhiteM,counterM][i],0.44+i*0.14,0.85,z));
 
-  // ----- sliding glass auto-doors (centred) -----
-  A(CTX.box(0.33, 1.38, 0.05, doorGlassM, -0.18, 0.74, 1.00));   // left leaf
-  A(CTX.box(0.33, 1.38, 0.05, doorGlassM,  0.18, 0.74, 1.00));   // right leaf
-  A(CTX.box(0.04, 1.38, 0.06, mullionM, 0,     0.74, 1.01));     // centre meeting stile
-  A(CTX.box(0.05, 1.42, 0.07, mullionM, -0.37, 0.74, 1.00));     // left jamb
-  A(CTX.box(0.05, 1.42, 0.07, mullionM,  0.37, 0.74, 1.00));     // right jamb
-  A(CTX.box(0.82, 0.16, 0.10, mullionM, 0, 1.49, 1.00));         // door header
-  A(CTX.box(0.70, 0.02, 0.34, baseTrimM, 0, 0.01, 1.13));        // welcome mat
+  // Checkout in the rear-left keeps the doorway sightline and right aisle clear.
+  A(CTX.box(1.42,0.80,0.62,counterM,-1.34,0.40,-1.20));
+  A(CTX.box(1.52,0.08,0.70,shelfDM,-1.34,0.84,-1.20));
+  A(CTX.box(0.30,0.30,0.24,mullionM,-1.62,1.03,-1.16));
+  A(CTX.box(0.22,0.05,0.18,greenM,-1.62,1.20,-1.15));
+  for(const x of [-1.25,0,1.25]) A(CTX.box(0.72,0.04,0.18,signWhiteM,x,2.45,-0.25));
 
-  // ===== signature sign band / fascia (white field + GREEN & BLUE glowing stripes) =====
-  A(CTX.box(2.42, 0.36, 0.10, signWhiteM, 0, 1.33, 0.97));   // white fascia field (front)
-  A(CTX.box(2.46, 0.10, 0.05, greenM, 0, 1.43, 1.00));       // upper green band
-  A(CTX.box(2.46, 0.10, 0.05, blueM,  0, 1.21, 1.00));       // lower blue band
-  // wrap the band around BOTH sides for street recognisability
-  for (const sx of [-1, 1]) {
-    A(CTX.box(0.10, 0.36, 1.95, signWhiteM, sx * 1.205, 1.33, -0.05));
-    A(CTX.box(0.05, 0.10, 1.99, greenM,     sx * 1.235, 1.43, -0.05));
-    A(CTX.box(0.05, 0.10, 1.99, blueM,      sx * 1.235, 1.21, -0.05));
+  // ---- front windows and a visibly open automatic doorway ----------------
+  for(const x of [-1.53,1.53]) A(CTX.box(1.70,1.64,0.06,glassM,x,0.88,frontZ));
+  for(const x of [-2.36,-1.53,-0.69,0.69,1.53,2.36]) A(CTX.box(0.05,1.72,0.05,mullionM,x,0.88,frontZ+0.04));
+  for(const x of [-1.53,1.53]){
+    A(CTX.box(1.70,0.05,0.04,mullionM,x,1.34,frontZ+0.05));
+    A(CTX.box(1.70,0.10,0.08,baseTrimM,x,0.06,frontZ+0.01));
+  }
+  A(CTX.box(1.42,0.12,0.10,mullionM,0,1.72,frontZ+0.03));
+  for(const x of [-0.70,0.70]) A(CTX.box(0.06,1.72,0.08,metalM,x,0.86,frontZ+0.03));
+  for(const x of [-0.97,0.97]){
+    A(CTX.box(0.48,1.58,0.04,doorGlassM,x,0.84,frontZ+0.08));
+    A(CTX.box(0.04,1.58,0.05,mullionM,x+(x<0?0.22:-0.22),0.84,frontZ+0.11));
+  }
+  A(CTX.box(1.30,0.025,0.72,baseTrimM,0,0.013,frontZ+0.30));
+
+  // ---- wraparound FamilyMart fascia --------------------------------------
+  A(CTX.box(W+0.10,0.08,0.28,wallDM,0,1.82,frontZ+0.10));
+  A(CTX.box(W+0.04,0.58,0.10,signWhiteM,0,2.13,frontZ+0.02));
+  A(CTX.box(W+0.06,0.14,0.04,greenM,0,2.31,frontZ+0.08));
+  A(CTX.box(W+0.06,0.14,0.04,blueM,0,1.95,frontZ+0.08));
+  for(const sx of [-1,1]){
+    A(CTX.box(0.10,0.58,D,signWhiteM,sx*HW,2.13,0));
+    A(CTX.box(0.04,0.14,D,greenM,sx*(HW+0.06),2.31,0));
+    A(CTX.box(0.04,0.14,D,blueM,sx*(HW+0.06),1.95,0));
   }
 
-  // ===== projecting rooftop pylon sign (double-sided: stripes pass through) =====
-  A(CTX.cyl(0.045, 0.05, 0.42, metalM, 0.85, 1.81, 0.70));      // short post above front corner
-  A(CTX.box(0.46, 0.50, 0.08, signWhiteM, 0.85, 2.27, 0.70));   // white sign box
-  A(CTX.box(0.50, 0.11, 0.14, greenM, 0.85, 2.39, 0.70));       // green band (protrudes both faces)
-  A(CTX.box(0.50, 0.11, 0.14, blueM,  0.85, 2.15, 0.70));       // blue band
-  A(CTX.box(0.50, 0.05, 0.10, mullionM, 0.85, 2.50, 0.70));     // cap
-  // perpendicular blade sign on the left wall (reads down the street, double-sided)
-  A(CTX.box(0.12, 0.06, 0.06, metalM,    -1.26, 1.35, 0.30));
-  A(CTX.box(0.08, 0.40, 0.46, signWhiteM,-1.34, 1.25, 0.30));
-  A(CTX.box(0.13, 0.10, 0.50, greenM,    -1.34, 1.35, 0.30));
-  A(CTX.box(0.13, 0.10, 0.50, blueM,     -1.34, 1.15, 0.30));
+  // ---- roof equipment and projecting street sign ------------------------
+  A(CTX.box(W,0.08,D,wallDM,0,2.55,0));
+  A(CTX.box(W+0.12,0.16,0.12,wallDM,0,2.66, HD-0.06));
+  A(CTX.box(W+0.12,0.16,0.12,wallDM,0,2.66,-HD+0.06));
+  for(const sx of [-1,1]) A(CTX.box(0.12,0.16,D,wallDM,sx*(HW+0.02),2.66,0));
+  A(CTX.box(0.62,0.34,0.48,metalM,-0.82,2.78,-0.20));
+  A(CTX.cyl(0.17,0.17,0.04,baseTrimM,-0.82,2.96,-0.20,12));
+  A(CTX.box(0.46,0.28,0.40,metalM,-1.45,2.75,-0.84));
+  for(const dx of [-0.18,0.18]) for(const dz of [-0.18,0.18])
+    A(CTX.cyl(0.03,0.03,0.18,metalM,0.88+dx,2.72,-0.78+dz,8));
+  A(CTX.cyl(0.30,0.32,0.54,tankM,0.88,3.02,-0.78,14));
+  A(CTX.cyl(0.22,0.30,0.09,tankM,0.88,3.33,-0.78,14));
+  A(CTX.cyl(0.04,0.04,0.48,metalM,2.10,2.88,1.08,8));
+  A(CTX.box(0.14,0.62,0.90,signWhiteM,2.10,3.20,1.08));
+  for(const o of [-0.08,0.08]){
+    A(CTX.box(0.04,0.15,0.90,greenM,2.10+o,3.37,1.08));
+    A(CTX.box(0.04,0.15,0.90,blueM,2.10+o,3.03,1.08));
+  }
 
-  // ===== flat roof: low parapet + AC condensers + water tank =====
-  A(CTX.box(2.52, 0.16, 0.08, roofM, 0, 1.68,  0.92));   // parapet front
-  A(CTX.box(2.52, 0.16, 0.08, roofM, 0, 1.68, -1.02));   // parapet back
-  A(CTX.box(0.08, 0.16, 2.02, roofM, -1.22, 1.68, -0.05));
-  A(CTX.box(0.08, 0.16, 2.02, roofM,  1.22, 1.68, -0.05));
-  // AC condensers
-  A(CTX.box(0.52, 0.32, 0.46, metalM, -0.55, 1.78, -0.35));
-  A(CTX.cyl(0.16, 0.16, 0.03, baseTrimM, -0.55, 1.95, -0.35));
-  A(CTX.sph(0.04, mullionM, -0.55, 1.96, -0.35, 8));
-  A(CTX.box(0.34, 0.24, 0.30, metalM, -0.18, 1.74, -0.72));
-  // stainless rooftop water tank (Taiwan 水塔) on little legs
-  for (const dx of [-0.18, 0.18]) for (const dz of [-0.18, 0.18])
-    A(CTX.cyl(0.03, 0.03, 0.18, metalM, 0.55 + dx, 1.69, -0.55 + dz));
-  A(CTX.cyl(0.28, 0.28, 0.42, tankM, 0.55, 1.99, -0.55));
-  A(CTX.cyl(0.20, 0.28, 0.08, tankM, 0.55, 2.24, -0.55));
-  A(CTX.cyl(0.025, 0.025, 0.12, metalM, 0.55, 2.34, -0.55));
+  // ---- eat-in counter remains part of FamilyMart, now inside the window ---
+  A(CTX.box(1.30,0.06,0.36,counterM,-1.45,0.84,1.42));
+  for(const x of [-1.92,-1.45,-0.98]){
+    A(CTX.cyl(0.05,0.06,0.60,metalM,x,0.31,0.94,10));
+    A(CTX.cyl(0.14,0.14,0.06,stoolM,x,0.64,0.94,12));
+  }
 
-  // ===== eat-in window counter + bar stools (right side of the front) =====
-  A(CTX.box(0.74, 0.05, 0.22, counterM, 0.68, 0.82, 1.12));   // counter ledge
-  A(CTX.box(0.03, 0.70, 0.03, metalM, 0.40, 0.46, 1.18));     // brackets
-  A(CTX.box(0.03, 0.70, 0.03, metalM, 0.96, 0.46, 1.18));
-  const stool = (x, z, h) => {
-    A(CTX.cyl(0.045, 0.055, h, metalM, x, h/2, z));
-    A(CTX.cyl(0.12, 0.12, 0.06, stoolM, x, h + 0.03, z));
-  };
-  stool(0.40, 1.40, 0.62); stool(0.68, 1.40, 0.62); stool(0.96, 1.40, 0.62);
-
-  // ===== small outdoor table + 2 stools (left side) =====
-  A(CTX.cyl(0.24, 0.24, 0.05, counterM, -0.92, 0.60, 1.50));  // table top
-  A(CTX.cyl(0.05, 0.05, 0.55, metalM, -0.92, 0.30, 1.50));    // pedestal
-  A(CTX.cyl(0.15, 0.15, 0.04, metalM, -0.92, 0.04, 1.50));    // foot
-  stool(-1.08, 1.46, 0.42); stool(-0.92, 1.78, 0.42);
-
-  // ===== recycle/trash bins by the door (green + blue lids) =====
-  A(CTX.box(0.20, 0.32, 0.20, metalM, -0.55, 0.18, 1.13)); A(CTX.box(0.22, 0.05, 0.22, greenM, -0.55, 0.36, 1.13));
-  A(CTX.box(0.20, 0.32, 0.20, metalM, -0.78, 0.18, 1.13)); A(CTX.box(0.22, 0.05, 0.22, blueM,  -0.78, 0.36, 1.13));
+  // Exterior bins sit under the left window; the doorway and approach stay open.
+  for(const [x,mat] of [[-1.50,greenM],[-1.84,blueM]]){
+    A(CTX.box(0.26,0.44,0.26,metalM,x,0.22,2.30));
+    A(CTX.box(0.29,0.06,0.29,mat,x,0.47,2.30));
+  }
 
   return g;
 }
