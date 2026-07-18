@@ -13,6 +13,23 @@ npm run check    # validates city data + syntax-checks main.js and taipei-landma
 
 Run `npm run check` after every city-data change.
 
+## Adding a monument / building
+
+Flow per [CONTRIBUTING.md](CONTRIBUTING.md): builder in `buildings/` → export via
+`taipei-landmarks.js` → `landmarks` entry in `city/taipei.js`. Tiny-planet ground rules:
+
+- **Author flat** (base at `y = 0`, +Y up, entrance +Z). Never add foundations or
+  curved bases — the runtime raises a *ground pad* (terrain follows the model's
+  tangent plane) under every landmark, and mesh, roads, props, and player all
+  follow it.
+- **Pad size comes from placement data** — `max(foot, farthest cols circle)`. If the
+  model outgrows its `foot`, bump it or extend `cols`, or edges overhang the pad.
+- **`cols` trace walls/piers only; doorways stay open.** Interior floors thin
+  (~0.05–0.1) and near `y = 0` — the player walks on analytic terrain.
+- **`base` tints the pad's paving; `extra` stays a small sink** (≈ `-0.02…-0.15`).
+- **Verify in-game**, especially the far corners of wide compounds — where
+  curvature gaps used to appear (the old floating CKS gate).
+
 ## Deploy to Antics
 
 The game is hosted on [Antics](https://antics.gg). Deploy with:

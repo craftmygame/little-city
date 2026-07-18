@@ -34,10 +34,10 @@ and `labelY` for the floating-label height. Complex walkable compounds can use `
 existing temple and market entries demonstrate.
 
 You never need to fit your model to the planet's curvature: keep the base flat at `y = 0`. The
-runtime lays a curved plaza under the whole footprint and drops buried stone footings from your
-`cols`/`ar` circles down past the curved ground, so walls sit seated while doorways (which have
-no cols) stay open. Set `placement.foundation: false` to opt out, or give it a color string to
-retint the footings.
+runtime raises the ground itself into a flat pad under every landmark footprint (sized from
+`foot`/`ar`/`cols`, tinted with your `base` color as plaza paving), then eases it back into the
+basin beyond the footprint — so walls, floors, and doorways all rest on genuinely level ground
+while the planet curves away past the pad.
 
 ## Add or change a road
 

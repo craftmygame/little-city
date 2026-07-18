@@ -36,7 +36,6 @@ function buildTaipei101(CTX){
   // Walkable podium lobby. The old podium was one sealed solid box with doors
   // painted on its face; this U-shell leaves a real street-level opening.
   g.add(CTX.box(9.20,0.08,7.30,lobbyFloor,0,0.04,0));                    // broad public floor, hugging the shell footprint
-  g.add(CTX.box(3.70,0.30,0.60,stoneDark,0,-0.10,3.55));                 // portal threshold step onto the curved plaza
   g.add(CTX.box(9.00,4.10,0.22,stone,0,2.10,-3.42));                     // rear wall
   g.add(CTX.box(0.22,4.10,6.85,stone,-4.42,2.10,0));                     // side walls
   g.add(CTX.box(0.22,4.10,6.85,stone, 4.42,2.10,0));

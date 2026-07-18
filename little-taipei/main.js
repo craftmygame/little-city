@@ -215,6 +215,19 @@ function terrain(dir){
     const d=Math.hypot(m.x-s.x,m.y-s.y);
     if(d<s.outer){ const w=1-THREE.MathUtils.smoothstep(d,s.inner,s.outer); h=THREE.MathUtils.lerp(h,s.target,w); }
   }
+  // landmark ground pads (registered below, before the planet mesh samples this):
+  // inside a footprint the ground follows the landmark's tangent PLANE — altitude
+  // rises d²/2R to cancel the globe's curvature — then eases back to the terrain.
+  for(let i=0;i<PADS.length;i++){ const p=PADS[i];
+    const du=Math.hypot(m.x-p.x,m.y-p.y)*KM;                     // surface units from the pad centre
+    if(du<p.outer){
+      const plane=p.h0 + du*du/(2*(R+p.h0));                     // the centre's tangent plane
+      let w=1-THREE.MathUtils.smoothstep(du,p.inner,p.outer);
+      if(c>0.12) w*=1-THREE.MathUtils.smoothstep(c,0.12,0.45);   // never pave a river shut
+      const t=THREE.MathUtils.lerp(h,plane,w);
+      if(t>h) h=t;                                               // pads only ever raise ground
+    }
+  }
   return h;
 }
 function groundR(dir){ return R + Math.max(terrain(dir), WATER-0.6); }
@@ -255,6 +268,72 @@ for(const D of DISTRICTS){ const d=Math.hypot(D.x,D.y)||1e-4; const w=warpKm(D.x
   D.r=Math.min(D.r*Math.min(spreadDist(d)/d, 1.9), Math.max(0.9,(16.0-dW)/0.55)); }
 for(const Rd of BLVD) Rd.pts=warpPts(Rd.pts);
 
+// ---- landmark ground pads. Landmark positions are final here (warp + de-clump
+// use pure geometry, no terrain), so terrain() can rise to meet every building
+// BEFORE the planet mesh samples it. A flat-authored base touches a sphere only
+// at its centre: the edges of a W-wide footprint would hang ≈W²/8R in the air
+// (waist-high under the CKS gate). Instead of bending models or hiding the gap
+// under fake foundations, the ground itself lifts to the model's tangent plane
+// across the footprint and eases back to the basin beyond it. Player, planet
+// mesh, roads and props all read the same terrain(), so the whole world agrees
+// on the new grade — for every current and future landmark.
+const LANDMARKS = CITY.landmarks.map(({builder,at:[x,y],name,placement})=>[
+  LM[builder], x, y, {...placement,label:name}
+]);
+// De-clump: even after the globe spread, the Xinyi cluster (101 / City Hall / SYS)
+// packs monuments closer than their model footprints. Nudge any pair whose
+// footprints overlap apart along their connecting line — keeping each landmark's
+// real bearing from the rest. Distances are measured as TRUE surface arcs (the
+// flat-km chart under-measures east–west gaps far from the pole). Taipei 101
+// stays pinned at the city-centre pole so the whole layout doesn't drift.
+const SEP = parseFloat(new URLSearchParams(location.search).get('sep')) || 1.05;  // target gap = SEP*(foot_i+foot_j)
+function declump(list){
+  const p = list.map(L=>({x:L[1], y:L[2], r:(L[3].foot||L[3].ar)}));   // footprint radius in world units
+  const authored=p.map(q=>({x:q.x,y:q.y}));
+  const pin = list.findIndex(L=>L[3].pin);
+  for(let it=0; it<240; it++){
+    const dirs=p.map(q=>mapDir(q.x,q.y));
+    const fx=p.map(()=>0), fy=p.map(()=>0);
+    for(let i=0;i<p.length;i++) for(let j=i+1;j<p.length;j++){
+      const arc=dirs[i].angleTo(dirs[j])*R;                            // true surface distance (units)
+      const need=(p[i].r+p[j].r)*SEP;
+      if(arc<need){
+        const dx=p[j].x-p[i].x, dy=p[j].y-p[i].y, d=Math.hypot(dx,dy)||1e-4;
+        const k=(need-arc)/KM*0.5/d;                                   // km push along the connecting line
+        fx[i]-=dx*k; fy[i]-=dy*k; fx[j]+=dx*k; fy[j]+=dy*k;
+      }
+    }
+    for(let i=0;i<p.length;i++){ p[i].x+=fx[i]; p[i].y+=fy[i]; }
+    if(pin>=0){ const ox=p[pin].x, oy=p[pin].y; for(const q of p){ q.x-=ox; q.y-=oy; } }  // re-anchor Taipei 101
+  }
+  // Keep hilltop landmarks centred on the terrain terraces already sampled
+  // into the planet mesh; nearby footprint changes must not push them off-grade.
+  list.forEach((L,i)=>{ if(L[3].terrainPin){ p[i].x=authored[i].x; p[i].y=authored[i].y; } });
+  list.forEach((L,i)=>{ L[1]=p[i].x; L[2]=p[i].y; });
+}
+for(const L of LANDMARKS){ const w=warpKm(L[1],L[2]); L[1]=w.x; L[2]=w.y; }   // real km → globe-spread km
+declump(LANDMARKS);
+const PADS=[];
+PADS.push(...LANDMARKS.map(([,x,y,opts])=>{                // h0 sampled with PADS still empty: pads never stack
+  const sc=opts.scale||1;
+  let reach=opts.foot||opts.ar||2;                         // plateau must cover the farthest wall/pier
+  for(const c of opts.cols||[]) reach=Math.max(reach,(Math.hypot(c.x,c.z)+c.r)*sc);
+  const inner=reach+0.5, h0=terrain(mapDir(x,y));
+  const drop=inner*inner/(2*(R+h0));                       // plateau-edge height above the basin
+  return {x, y, inner, outer:inner+Math.max(1.8,drop*3.2), h0,
+          col:new THREE.Color(typeof opts.base==='string'?opts.base:'#dcd6c8')};
+}));
+// paving weight/colour of the strongest pad at a map point (for planet-mesh tint)
+function padPave(m){
+  let w=0, col=null;
+  for(let i=0;i<PADS.length;i++){ const p=PADS[i];
+    const du=Math.hypot(m.x-p.x,m.y-p.y)*KM;
+    const wi=1-THREE.MathUtils.smoothstep(du, p.inner, p.outer-0.9);  // paving stops short of the grass bank
+    if(wi>w){ w=wi; col=p.col; }
+  }
+  return w>0.02?{w,col}:null;
+}
+
 let planetMesh;
 {
   const geo = new THREE.IcosahedronGeometry(R, 48);
@@ -281,6 +360,8 @@ let planetMesh;
     }
     else if(h < 5.0){ c.copy(COL.forest).lerp(COL.forest2, THREE.MathUtils.clamp((h-2.0)/3.0,0,1)); }
     else { c.copy(COL.forest2).lerp(COL.rock, THREE.MathUtils.clamp((h-5.0)/3.0,0,1)); }
+    // landmark pads read as paved plazas: tint the raised ground itself
+    if(h>WATER+0.3 && rc<0.42){ const pp=padPave(m); if(pp) c.lerp(pp.col, pp.w*0.85); }
     colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
@@ -774,30 +855,6 @@ function collectSpinners(o){ o.traverse(n=>{ if(n.userData&&n.userData.tpSpin) s
 const landmarkLabels=[], _lblV=new THREE.Vector3();
 function addLandmarkLabel(obj, text, y){ const sp=makeLabel(text); sp.position.y=y; sp.scale.set(3.4,0.82,1); obj.add(sp); landmarkLabels.push(sp); }
 
-// --- a curved "plaza" base that hugs the round planet: a spherical-cap patch built in the
-//     landmark's LOCAL tangent frame, so wide monument bases sit on the curve instead of
-//     floating as a flat chord (the fix for flat landmark foundations, à la messenger.abeto.co
-//     which bakes its whole world as curved geometry). x0..x1,z0..z1 = footprint rect (units).
-function curvedPlaza(x0,x1,z0,z1, Rc, color, opts={}){
-  const raise=opts.raise!=null?opts.raise:0.06, depth=opts.depth!=null?opts.depth:0.5;
-  const span=Math.max(x1-x0,z1-z0), seg=Math.max(4,Math.min(26,Math.ceil(span/0.8)));
-  const cap=(x,z)=>{ const r2=Rc*Rc-x*x-z*z; return (r2>0?Math.sqrt(r2):0)-Rc; };  // dip toward globe
-  const top=(x,z)=>cap(x,z)+raise, bot=(x,z)=>cap(x,z)-depth;                      // skirt buries the edge
-  const X=i=>x0+(x1-x0)*i/seg, Z=j=>z0+(z1-z0)*j/seg, p=[];
-  const tri=(a,b,c)=>p.push(a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2]);
-  const quad=(a,b,c,d)=>{ tri(a,b,c); tri(a,c,d); };
-  for(let i=0;i<seg;i++) for(let j=0;j<seg;j++){ const xa=X(i),xb=X(i+1),za=Z(j),zb=Z(j+1);
-    quad([xa,top(xa,za),za],[xa,top(xa,zb),zb],[xb,top(xb,zb),zb],[xb,top(xb,za),za]); }
-  for(let i=0;i<seg;i++){ const xa=X(i),xb=X(i+1);
-    quad([xa,top(xa,z0),z0],[xb,top(xb,z0),z0],[xb,bot(xb,z0),z0],[xa,bot(xa,z0),z0]);
-    quad([xb,top(xb,z1),z1],[xa,top(xa,z1),z1],[xa,bot(xa,z1),z1],[xb,bot(xb,z1),z1]); }
-  for(let j=0;j<seg;j++){ const za=Z(j),zb=Z(j+1);
-    quad([x1,top(x1,za),za],[x1,top(x1,zb),zb],[x1,bot(x1,zb),zb],[x1,bot(x1,za),za]);
-    quad([x0,top(x0,zb),zb],[x0,top(x0,za),za],[x0,bot(x0,za),za],[x0,bot(x0,zb),zb]); }
-  const geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.Float32BufferAttribute(p,3)); geo.computeVertexNormals();
-  const m=new THREE.Mesh(geo, toon(color,{side:THREE.DoubleSide})); m.receiveShadow=true; return m;
-}
-
 // --- orient + drop a local-space model onto the planet surface at (xkm,ykm)
 function placeLandmark(builder, xkm, ykm, opts={}){
   const grp = builder(CTX);
@@ -815,47 +872,11 @@ function placeLandmark(builder, xkm, ykm, opts={}){
   // so negate to keep `face` meaning clockwise compass degrees (90 = front→west)
   if(opts.face) out.rotateY(-opts.face*Math.PI/180);
   out.position.copy(dir).multiplyScalar(groundR(dir)+(opts.extra||0));
-  // Keep architecture level. Bending every vertex to the globe made roofs,
-  // door heads and long podiums visibly bow. The recessed authored base and
-  // terrain-following plaza below absorb the small remaining curvature instead.
-  if(opts.base!==false){                                   // curved ground plaza so the base hugs the globe
-    const bb=new THREE.Box3().setFromObject(grp);
-    if(isFinite(bb.min.x) && isFinite(bb.max.x)){
-      const cx=(bb.min.x+bb.max.x)/2, cz=(bb.min.z+bb.max.z)/2;
-      // cover the FULL footprint plus an apron: every flat-authored edge must land on the
-      // plaza — the old 92%-of-bbox cover left the outermost slab edges hanging over bare
-      // curved terrain (visible as a floating ledge at Taipei 101's forecourt)
-      const hx=(bb.max.x-bb.min.x)/2+0.45, hz=(bb.max.z-bb.min.z)/2+0.45;
-      // raise cancels opts.extra so the plaza always lands at ground level even when the
-      // model is sunk; 0.075 keeps it just proud of the road ribbons (asphalt sits at 0.06)
-      const plaza=curvedPlaza(cx-hx,cx+hx,cz-hz,cz+hz, groundR(dir), opts.base||'#dcd6c8', {raise:0.075-(opts.extra||0)});
-      if(out===grp && opts.scale) plaza.scale.setScalar(1/opts.scale);   // unmerged hosts keep their authored scale; the plaza is built in world units
-      out.add(plaza);
-    }
-  }
-  // ---- automatic buried foundation: walls that continue down into the planet.
-  // A flat-authored base only touches the round ground at its centre — the corners of
-  // a W-wide footprint hang ≈W²/8R above the curve. The collider circles every
-  // landmark must author already trace its walls and piers (doorways are deliberately
-  // left uncovered), so each circle drops a stone footing from just beneath the base
-  // slab to below the plaza. Flat shells meet the curved ground everywhere, no
-  // architecture is bent, and future landmarks inherit this for free.
-  // placement.foundation:false opts out; a color string retints it.
-  if(opts.foundation!==false && (opts.cols||opts.ar)){
-    const sc=opts.scale||1, gr=groundR(dir);
-    const rings=(opts.cols||[{x:0,z:0,r:opts.ar}]).map(c=>({x:c.x*sc,z:c.z*sc,r:c.r*sc+0.3}));
-    const geos=rings.map((c,i)=>{
-      const far=Math.hypot(c.x,c.z)+c.r, h=far*far/(2*gr)+0.6;    // deep enough for the sag at the footing's far edge
-      const geo=new THREE.CylinderGeometry(c.r,c.r,h,18);
-      geo.translate(c.x, 0.05-(i%4)*0.012-h/2, c.z);              // staggered tops: coplanar caps of overlapping footings would z-fight
-      return geo.toNonIndexed();
-    });
-    const fnd=new THREE.Mesh(mergeGeometries(geos,false), toon(typeof opts.foundation==='string'?opts.foundation:'#a8a195'));
-    fnd.geometry.computeVertexNormals();
-    fnd.castShadow=true; fnd.receiveShadow=true;
-    if(out===grp && opts.scale) fnd.scale.setScalar(1/opts.scale); // same world-units compensation as the plaza
-    out.add(fnd);
-  }
+  // Keep architecture level: bending vertices to the globe bows roofs and door
+  // heads. The landmark's ground pad (registered in PADS before the planet mesh
+  // was built) raises the terrain to this model's tangent plane instead, so the
+  // flat base rests on genuinely flat, plaza-tinted ground — nothing bent,
+  // buried, or bolted on. groundR here already includes the pad.
   planetGroup.add(out);
   // colliders: either a list of local-space circles (walkable compounds — the player can
   // wander plazas and slip between piers) or one circle of radius opts.ar around the centre
@@ -1578,47 +1599,9 @@ function _pointAlong(frac){ let d=frac*gondola.len; for(let i=0;i<gondola.segLen
 function updateGondola(dt){ for(const c of gondola.cabins){ c.s=(c.s+dt*0.03)%1; const p=_pointAlong(c.s), up=p.clone().normalize();
   c.obj.position.copy(p).addScaledVector(up,-1.29); c.obj.quaternion.setFromUnitVectors(UPY, up); } }
 
-// Resolve declarative city records to the tuple format used by the placement runtime.
-// Contributor-facing coordinates and options live in city/taipei.js.
-const LANDMARKS = CITY.landmarks.map(({builder,at:[x,y],name,placement})=>[
-  LM[builder], x, y, {...placement,label:name}
-]);
-
-// De-clump: even after the globe spread, the Xinyi cluster (101 / City Hall / SYS)
-// packs monuments closer than their model footprints. Nudge any pair whose
-// footprints overlap apart along their connecting line — keeping each landmark's
-// real bearing from the rest. Distances are measured as TRUE surface arcs (the
-// flat-km chart under-measures east–west gaps far from the pole). Taipei 101
-// stays pinned at the city-centre pole so the whole layout doesn't drift.
-const SEP = parseFloat(new URLSearchParams(location.search).get('sep')) || 1.05;  // target gap = SEP*(foot_i+foot_j)
-function declump(list){
-  const p = list.map(L=>({x:L[1], y:L[2], r:(L[3].foot||L[3].ar)}));   // footprint radius in world units
-  const authored=p.map(q=>({x:q.x,y:q.y}));
-  const pin = list.findIndex(L=>L[3].pin);
-  for(let it=0; it<240; it++){
-    const dirs=p.map(q=>mapDir(q.x,q.y));
-    const fx=p.map(()=>0), fy=p.map(()=>0);
-    for(let i=0;i<p.length;i++) for(let j=i+1;j<p.length;j++){
-      const arc=dirs[i].angleTo(dirs[j])*R;                            // true surface distance (units)
-      const need=(p[i].r+p[j].r)*SEP;
-      if(arc<need){
-        const dx=p[j].x-p[i].x, dy=p[j].y-p[i].y, d=Math.hypot(dx,dy)||1e-4;
-        const k=(need-arc)/KM*0.5/d;                                   // km push along the connecting line
-        fx[i]-=dx*k; fy[i]-=dy*k; fx[j]+=dx*k; fy[j]+=dy*k;
-      }
-    }
-    for(let i=0;i<p.length;i++){ p[i].x+=fx[i]; p[i].y+=fy[i]; }
-    if(pin>=0){ const ox=p[pin].x, oy=p[pin].y; for(const q of p){ q.x-=ox; q.y-=oy; } }  // re-anchor Taipei 101
-  }
-  // Keep hilltop landmarks centred on the terrain terraces already sampled
-  // into the planet mesh; nearby footprint changes must not push them off-grade.
-  list.forEach((L,i)=>{ if(L[3].terrainPin){ p[i].x=authored[i].x; p[i].y=authored[i].y; } });
-  list.forEach((L,i)=>{ L[1]=p[i].x; L[2]=p[i].y; });
-}
-
+// LANDMARKS (with warp + de-clump) now resolves up top, before the planet mesh
+// samples terrain(), so every landmark's ground pad is baked into the world.
 function placeAllLandmarks(){
-  for(const L of LANDMARKS){ const w=warpKm(L[1],L[2]); L[1]=w.x; L[2]=w.y; }   // real km → globe-spread km
-  declump(LANDMARKS);
   for(const [builder,x,y,opts] of LANDMARKS) placeLandmark(builder, x, y, opts);
 }
 
