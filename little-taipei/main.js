@@ -252,7 +252,7 @@ function parkWeight(x,y){ let w=0; for(let i=0;i<PARKS.length;i++){ const p=PARK
 const DISTRICTS = CITY.districts.map(({at:[x,y],radiusKm:r,density:d})=>({x,y,r,d}));
 function cityDensity(x,y){ let w=0; for(let i=0;i<DISTRICTS.length;i++){ const D=DISTRICTS[i]; const d=Math.hypot(x-D.x,y-D.y); w=Math.max(w, D.d*(1-THREE.MathUtils.smoothstep(d,D.r*0.5,D.r))); } return w; }
 
-const BLVD = CITY.roads.map(({widthKm:w,path:pts})=>({w,pts:pts.map(point=>point.slice())}));
+const BLVD = CITY.roads.map(({id,name,widthKm:w,path:pts})=>({id,name,w,pts:pts.map(point=>point.slice())}));
 function roadDist(x,y){ let m=1e9; for(let i=0;i<BLVD.length;i++){ const d=polyDist(x,y,BLVD[i].pts); if(d<m)m=d; } return m; }
 
 // ---- SPREAD the authored real-km layout around the whole globe (see spreadDist).
@@ -1420,15 +1420,60 @@ function buildStreetLayer(){
 //     parked scooter clusters, YouBike stands, the green+red mailbox pair,
 //     MRT entrances, a paved spawn plaza, temple incense and one musical
 //     garbage truck. All kerb-biased (eye-level dressing), all muted palette.
-let garbageTruckPos=null;
+let garbageTruckPos=null, youBikeStationSites=[];
+function reserveYouBikeStations(){
+  // A small authored network on dry park edges and low-density sidewalk
+  // shoulders. Each station sits outside its road with enough centreline offset
+  // for the road half-width, the model's full road-facing depth (1.25u), and
+  // breathing room. Riverside sites are deliberately excluded: a river-carve
+  // check catches visually grassy samples that still belong to a water channel.
+  const sites=[
+    // One station at Da'an; the western pair are in separate neighbourhoods.
+    {road:'xinyi-road',segment:0,side:1,ts:[0.94,0.90,0.98]},
+    {road:'zhongshan',segment:0,side:-1,ts:[0.25,0.18,0.32],minPark:0,maxDensity:0.55},
+    {road:'roosevelt',segment:0,side:-1,ts:[0.45,0.38,0.52],minPark:0,maxDensity:0.55},
+    // A quieter sidewalk bay along 228 Peace Memorial Park.
+    {road:'zhongxiao',segment:0,side:1,ts:[0.55,0.52,0.58]},
+    // Dry inland edge near the Elephant Mountain trailhead.
+    {road:'heping',segment:2,side:1,ts:[0.50,0.46,0.54],minPark:0.05},
+    // Four low-density neighbourhood shoulders, well away from waterways.
+    {road:'heping',segment:2,side:-1,ts:[0.85,0.78,0.70],minPark:0,maxDensity:0.15},
+    {road:'xinyi-road',segment:5,side:-1,ts:[0.85,0.78,0.92],minPark:0,maxDensity:0.48},
+    {road:'dunhua',segment:2,side:-1,ts:[0.25,0.18,0.32],minPark:0,maxDensity:0.18},
+    {road:'fuxing',segment:1,side:-1,ts:[0.85,0.78,0.92],minPark:0,maxDensity:0.42},
+  ];
+  for(const site of sites){
+    const Rd=BLVD.find(r=>r.id===site.road); if(!Rd) continue;
+    const a=Rd.pts[site.segment], b=Rd.pts[site.segment+1];
+    const dx=b[0]-a[0], dy=b[1]-a[1], len=Math.hypot(dx,dy);
+    const nx=-dy/len*site.side, ny=dx/len*site.side, off=Rd.w/2+(1.25+0.35)/KM;
+    for(const t of site.ts){
+      const rx=a[0]+dx*t, ry=a[1]+dy*t, x=rx+nx*off, y=ry+ny*off;
+      const dir=mapDir(x,y), h=terrain(dir);
+      if(h<WATER+0.55 || h>2.1 || isWater(dir) || riverCarve(x,y)>0.12) continue;
+      if(parkWeight(x,y)<(site.minPark??0.30) || cityDensity(x,y)>(site.maxDensity??1)) continue;
+      if(youBikeStationSites.some(other=>dir.angleTo(other.dir)*R<10)) continue;
+      if(!freeSpot(dir,1.58)) continue;
+      youBikeStationSites.push({dir,roadDir:mapDir(rx,ry)});
+      claim(dir,1.58);                                    // reserve before trees/kerb props scatter
+      break;
+    }
+  }
+  window.__youBikeStations=youBikeStationSites.length;
+}
 function buildCityFlavour(){
   const mDark=toon('#2e3236'), mSeat=toon('#3a3e42'), mChrome=toon('#c9cdd1');
   const mGreen=toon('#2e6e52'), mRed=toon('#a34434'), mMrt=toon('#31567F');
-  const mBikeO=toon('#b8863a'), mRack=toon('#7c828a'), mPave=toon('#cfc8b6'), mPaveD=toon('#b8b09c');
+  const mBikeWhite=toon('#eef0e9'), mBikeYellow=toon('#f5b700'), mBikeGreen=toon('#36a57b');
+  const mBikeMetal=toon('#9ea5a8'), mBasket=toon('#555b5e');
+  const mRack=toon('#7c828a'), mPave=toon('#cfc8b6'), mPaveD=toon('#b8b09c');
   const mGlow=toon('#fff0c4',{emissive:'#ffcf7a',emissiveIntensity:0.6});
   const SCOOTS=['#8a9096','#b8b3a6','#6f7d8c','#a06a5a','#5a7d6f'].map(c=>toon(c));
   const sBox=(g,mat,w,h,d,x,y,z)=>{ const m=new THREE.Mesh(faceted(new THREE.BoxGeometry(w,h,d)),mat); m.position.set(x||0,y||0,z||0); m.castShadow=true; g.add(m); return m; };
   const sCyl=(g,mat,rt,rb,h,seg,x,y,z)=>{ const m=new THREE.Mesh(faceted(new THREE.CylinderGeometry(rt,rb,h,seg)),mat); m.position.set(x||0,y||0,z||0); m.castShadow=true; g.add(m); return m; };
+  const sRod=(g,mat,r,a,b,seg=6)=>{ const av=new THREE.Vector3(...a), d=new THREE.Vector3(...b).sub(av), len=d.length();
+    const m=sCyl(g,mat,r,r,len,seg,(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.multiplyScalar(1/len)); return m; };
   const wheel=(g,r,x,y,z)=>{ const m=new THREE.Mesh(faceted(new THREE.CylinderGeometry(r,r,0.045,9)),mDark); m.rotation.z=Math.PI/2; m.position.set(x,y,z); m.castShadow=true; g.add(m); return m; };
 
   function makeScooter(){
@@ -1448,17 +1493,70 @@ function buildCityFlavour(){
   }
   function makeYouBike(){
     const g=new THREE.Group();
-    sBox(g,mRack,1.0,0.06,0.08,0,0.10,-0.22);             // rack rail
+    // Full-size YouBike 2.0 proportions beside the ~1.75u-tall player. The old
+    // 0.31u-high bikes read as toys; these use 0.68u wheels, a 0.95u saddle and
+    // 1.08u handlebars, close to a real upright city bike.
+    const HUB_Y=0.35, WHEEL_R=0.34, REAR_Z=-0.64, FRONT_Z=0.64;
+    const addBikeWheel=(b,z)=>{
+      const tire=new THREE.Mesh(faceted(new THREE.TorusGeometry(WHEEL_R,0.035,6,16)),mDark);
+      tire.rotation.y=Math.PI/2; tire.position.set(0,HUB_Y,z); tire.castShadow=true; b.add(tire);
+      const rim=new THREE.Mesh(faceted(new THREE.TorusGeometry(0.295,0.012,5,16)),mBikeMetal);
+      rim.rotation.y=Math.PI/2; rim.position.set(0,HUB_Y,z); rim.castShadow=true; b.add(rim);
+      for(let j=0;j<8;j++){ const a=j/8*Math.PI*2;
+        sRod(b,mBikeMetal,0.005,[0,HUB_Y,z],[0,HUB_Y+Math.cos(a)*0.285,z+Math.sin(a)*0.285],4); }
+      const axle=sCyl(b,mChrome,0.025,0.025,0.14,6,0,HUB_Y,z); axle.rotation.z=Math.PI/2;
+      const fender=new THREE.Mesh(faceted(new THREE.TorusGeometry(0.375,0.021,5,12,Math.PI)),mBikeYellow);
+      fender.rotation.y=Math.PI/2; fender.position.set(0,HUB_Y,z); fender.castShadow=true; b.add(fender);
+    };
+    const addBasket=(b)=>{
+      // Open rails keep the basket legible without turning it into a heavy box.
+      sBox(b,mBasket,0.44,0.018,0.28,0,0.66,0.75);
+      for(const y of [0.68,0.79,0.90]) for(const z of [0.61,0.89]) sBox(b,mBasket,0.48,0.015,0.015,0,y,z);
+      for(const x of [-0.23,0.23]){
+        sBox(b,mBasket,0.015,0.24,0.015,x,0.79,0.89);
+        sBox(b,mBasket,0.015,0.015,0.30,x,0.90,0.75);
+      }
+      for(const x of [-0.15,0,0.15]) sBox(b,mBasket,0.012,0.23,0.012,x,0.79,0.89);
+    };
+
+    // Low ground rail and one compact white/yellow dock per bicycle.
+    sBox(g,mRack,1.72,0.055,0.08,0,0.08,1.06);
     for(let i=0;i<3;i++){
-      const b=new THREE.Group(); b.position.x=(i-1)*0.34; g.add(b);
-      wheel(b,0.09,0,0.09,0.17); wheel(b,0.09,0,0.09,-0.17);
-      const bar=sBox(b,mBikeO,0.035,0.035,0.30,0,0.18,0); bar.rotation.x=-0.25;   // frame
-      sCyl(b,mBikeO,0.012,0.012,0.14,5,0,0.24,0.16);      // head tube
-      sBox(b,mDark,0.14,0.025,0.03,0,0.31,0.15);          // handlebar
-      sBox(b,mSeat,0.08,0.03,0.10,0,0.28,-0.13);          // saddle
-      sBox(g,mRack,0.03,0.10,0.03,(i-1)*0.34,0.05,-0.22); // rack post
+      const x=(i-1)*0.62, b=new THREE.Group(); b.position.x=x; g.add(b);
+      addBikeWheel(b,REAR_Z); addBikeWheel(b,FRONT_Z);
+
+      // White step-through frame, twin fork, seat post and upright bars.
+      sRod(b,mBikeWhite,0.045,[0,0.39,-0.08],[0,0.58,0.43],7);  // down tube
+      sRod(b,mBikeWhite,0.035,[0,HUB_Y,REAR_Z],[0,0.76,-0.28],6);
+      sRod(b,mBikeWhite,0.034,[0,0.76,-0.28],[0,0.39,-0.08],6);
+      sRod(b,mBikeWhite,0.028,[0,HUB_Y,REAR_Z],[0,0.39,-0.08],5);
+      sRod(b,mBikeWhite,0.030,[0,0.64,-0.26],[0,0.56,0.40],6);  // low step-through rail
+      sRod(b,mBikeWhite,0.038,[0,0.55,0.42],[0,0.86,0.48],7);  // head tube
+      for(const fx of [-0.035,0.035]) sRod(b,mBikeWhite,0.022,[fx,0.58,0.44],[fx,HUB_Y,FRONT_Z],5);
+      sRod(b,mChrome,0.022,[0,0.75,-0.28],[0,0.94,-0.30],6);
+      sBox(b,mSeat,0.20,0.055,0.27,0,0.96,-0.31);
+      sRod(b,mChrome,0.021,[0,0.84,0.48],[0,1.04,0.50],6);
+      sRod(b,mChrome,0.018,[-0.24,1.06,0.50],[0.24,1.06,0.50],6);
+      sRod(b,mDark,0.023,[-0.24,1.06,0.50],[-0.15,1.06,0.50],6);
+      sRod(b,mDark,0.023,[0.15,1.06,0.50],[0.24,1.06,0.50],6);
+
+      // YouBike's yellow rear skirt/chain guard and turquoise brand accent.
+      for(const sx of [-1,1]){
+        const skirt=new THREE.Mesh(faceted(new THREE.CircleGeometry(0.305,12,0,Math.PI)),mBikeYellow);
+        skirt.rotation.y=sx*Math.PI/2; skirt.position.set(sx*0.052,HUB_Y,REAR_Z); skirt.castShadow=true; b.add(skirt);
+      }
+      sRod(b,mBikeYellow,0.060,[0,HUB_Y,REAR_Z],[0,0.39,-0.08],8);
+      const crank=sCyl(b,mBikeYellow,0.105,0.105,0.09,10,0,0.39,-0.08); crank.rotation.z=Math.PI/2;
+      sRod(b,mBikeGreen,0.014,[0.060,0.60,-0.71],[0.060,0.54,-0.67],5);
+      sRod(b,mBikeGreen,0.014,[0.060,0.54,-0.67],[0.060,0.60,-0.63],5);
+      addBasket(b);
+
+      sBox(g,mBikeWhite,0.24,0.045,0.42,x,0.035,1.04);    // dock foot
+      sBox(g,mBikeWhite,0.13,0.48,0.13,x,0.29,1.07);      // dock post
+      sBox(g,mBikeYellow,0.15,0.16,0.055,x,0.48,1.005);   // yellow reader/lock face
+      sBox(g,mBikeGreen,0.10,0.030,0.060,x,0.49,0.972);   // availability light
     }
-    return { obj:g, ar:0.7, h:0.75 };
+    return { obj:g, ar:1.5, h:1.2 };
   }
   function makeMailboxPair(){
     const g=new THREE.Group();
@@ -1522,9 +1620,16 @@ function buildCityFlavour(){
     claim(at.dir, ar*1.05);
   }
   for(let i=0;i<16;i++){ const at=takeKerb(1.0); if(at) placeKerb(makeScooterRow(randi(3,6)), at, true); }
-  for(let i=0;i<7;i++){ const at=takeKerb(0.9); if(at) placeKerb(makeYouBike(), at, true); }
   for(let i=0;i<6;i++){ const at=takeKerb(0.6); if(at) placeKerb(makeMailboxPair(), at, true); }
   for(let i=0;i<6;i++){ const at=takeKerb(1.1); if(at) placeKerb(makeMRTEntrance(), at, true); }
+
+  // Only the authored dry, quiet stations: no procedural copies, and none
+  // in the spawn plaza or any carriageway.
+  for(const {dir,roadDir} of youBikeStationSites){
+    const res=makeYouBike();
+    placeFacing(res.obj,dir,roadDir.clone().sub(dir),0); planetGroup.add(bakeMerge(res.obj));
+    colliders.push({dir:dir.clone(),ar:(res.ar*0.8)/R,h:res.h});
+  }
 
   // ---- authored MRT stations (real km): Taipei City Hall on Zhongxiao E Rd,
   //      Taipei 101/World Trade Center on Xinyi Rd at Keelung Rd.
@@ -1553,10 +1658,9 @@ function buildCityFlavour(){
     // The former disc + ring made the spawn read as a podium on a model railway;
     // the continuous road surface now runs directly beneath the player.
     const vl=Math.hypot(SPAWN_KM.x,SPAWN_KM.y), ux=-SPAWN_KM.x/vl, uy=-SPAWN_KM.y/vl;   // spawn → 101
-    for(const [bx,by,maker] of [[uy,-ux,()=>makeScooterRow(5)],[-uy,ux,makeYouBike],[(uy-ux)*0.71,(-ux-uy)*0.71,makeMailboxPair]]){
+    for(const [bx,by,maker] of [[uy,-ux,()=>makeScooterRow(5)],[(uy-ux)*0.71,(-ux-uy)*0.71,makeMailboxPair]]){
       const px=SPAWN_KM.x+bx*0.30, py=SPAWN_KM.y+by*0.30;
-      const dir=mapDir(px,py); if(!freeSpot(dir,0.9)) continue;
-      const res=maker();
+      const dir=mapDir(px,py), res=maker(); if(!freeSpot(dir,res.ar)) continue;
       placeFacing(res.obj, dir, sDir.clone().sub(dir), 0); planetGroup.add(bakeMerge(res.obj));
       colliders.push({dir:dir.clone(), ar:(res.ar*0.8)/R, h:res.h}); claim(dir,res.ar);
     }
@@ -1664,6 +1768,7 @@ function buildTaipeiWorld(){
   buildRivers(); buildRoads(); buildMRT();
   placeAllLandmarks();
   placeShops();
+  reserveYouBikeStations();
   buildCityBlocks();
   buildStreetLayer();
   buildCityFlavour();
