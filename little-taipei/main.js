@@ -1303,39 +1303,55 @@ function buildCityBlocks(){
   return placed;
 }
 
-// --- STREET LAYER: kerbside trees + street lights down the avenues.
-//     Trees are layered-blob silhouettes (no cubes) in two InstancedMeshes with
-//     flat shadow discs; lights are merged into a couple of meshes. Everything
-//     sits just PAST the widened kerb so the roadway stays clear to stroll.
+// --- STREET LAYER: kerbside trees + street lights down selected avenues.
+//     The furnishing strip is inside the pale sidewalk apron, never on asphalt.
+//     Broad roads get occasional trees; lights use a wider set of main streets.
+//     Both alternate sides and leave junctions, landmarks and the spawn view open.
 function kerbPoints(stepKm, offExtraKm){
   const pts=[];
-  for(const Rd of BLVD){
+  for(let ri=0;ri<BLVD.length;ri++){
+    const Rd=BLVD[ri];
     const off=Rd.w/2 + 0.045 + (offExtraKm||0);          // just past the kerb
     for(let i=0;i<Rd.pts.length-1;i++){
       const a=Rd.pts[i], b=Rd.pts[i+1];
       const dx=b[0]-a[0], dy=b[1]-a[1], len=Math.hypot(dx,dy);
       const tx=dx/len, ty=dy/len, px=-ty, py=tx;
-      for(let d=stepKm*0.5; d<len; d+=stepKm){
+      let slot=0;
+      for(let d=stepKm*0.5; d<len; d+=stepKm,slot++){
         for(const side of [-1,1]){
           const x=a[0]+tx*d+px*off*side, y=a[1]+ty*d+py*off*side;
-          pts.push({x,y,side,tx,ty});
+          pts.push({x,y,side,tx,ty,road:Rd,roadIndex:ri,segmentIndex:i,slot});
         }
       }
     }
   }
   return pts;
 }
+// A segment offset alone is not safe near a bend or crossing: a point that is
+// beside one street can still be in another street's carriageway. Require the
+// final point to sit in its source sidewalk and outside every road's asphalt.
+function isSidewalkFurniturePoint(p, roadMarginKm){
+  const sourceDist=polyDist(p.x,p.y,p.road.pts);
+  if(sourceDist < p.road.w/2+roadMarginKm || sourceDist > p.road.w/2+0.055) return false;
+  for(const Rd of BLVD){
+    if(polyDist(p.x,p.y,Rd.pts) < Rd.w/2+roadMarginKm) return false;
+  }
+  return true;
+}
 function buildStreetLayer(){
   const dummy=new THREE.Object3D(), tmpCol=new THREE.Color();
-  // ---- trees: trunk + layered-blob canopy, instanced ----
+  // ---- young street trees: crown begins above head height, ~3u overall ----
   const slots=[];
-  for(const p of kerbPoints(0.58,0.018)){
+  for(const p of kerbPoints(1.05,-0.006)){
+    if(p.road.w<0.24) continue;                         // boulevard planting, not every side street
+    const keepSide=((p.roadIndex+p.segmentIndex+p.slot)&1) ? 1 : -1;
+    if(p.side!==keepSide || rng()<0.18) continue;        // one alternating kerb, with natural gaps
+    if(!isSidewalkFurniturePoint(p,0.018)) continue;     // includes junction clearance
     const dir=mapDir(p.x,p.y), h=terrain(dir);
     if(h<WATER+0.55 || h>2.1) continue;
     if(riverCarve(p.x,p.y)>0.3) continue;
-    if(Math.hypot(p.x-SPAWN_KM.x,p.y-SPAWN_KM.y)<0.35) continue;
-    if(rng()<0.72) continue;                             // occasional street trees, not a continuous hedge
-    const s=rand(0.82,1.08), clear=0.70+s*0.22;          // canopy + a pedestrian shoulder
+    if(Math.hypot(p.x-SPAWN_KM.x,p.y-SPAWN_KM.y)<0.72) continue;
+    const s=rand(0.90,1.08), clear=1.25+s*0.18;          // reserve breathing room around the crown
     if(!freeSpot(dir,clear)) continue;
     slots.push({dir,s,clear});
     claim(dir,clear);                                    // reserve now so selected canopies cannot overlap
@@ -1343,11 +1359,11 @@ function buildStreetLayer(){
   const N=slots.length;
   window.__streetTrees=N;
   if(N){
-    const trunkGeo=faceted(new THREE.CylinderGeometry(0.055,0.08,0.85,6)); trunkGeo.translate(0,0.42,0);
+    const trunkGeo=faceted(new THREE.CylinderGeometry(0.075,0.11,1.82,7)); trunkGeo.translate(0,0.91,0);
     const canopyGeo=(()=>{                                // layered blob silhouette (merged, still instanced)
-      const a=new THREE.IcosahedronGeometry(0.34,1); a.scale(1.18,0.88,1.18); a.translate(0,1.0,0);
-      const b=new THREE.IcosahedronGeometry(0.25,1); b.scale(1.06,0.8,1.06); b.translate(0.11,1.32,0.05);
-      const c=new THREE.IcosahedronGeometry(0.19,1); c.scale(1.0,0.78,1.0); c.translate(-0.13,1.26,-0.06);
+      const a=new THREE.IcosahedronGeometry(0.52,1); a.scale(1.14,0.82,1.14); a.translate(0,2.52,0);
+      const b=new THREE.IcosahedronGeometry(0.42,1); b.scale(1.06,0.82,1.06); b.translate(0.20,2.84,0.06);
+      const c=new THREE.IcosahedronGeometry(0.34,1); c.scale(1.0,0.78,1.0); c.translate(-0.27,2.72,-0.08);
       return faceted(mergeGeometries([a,b,c],false));
     })();
     const trunks=new THREE.InstancedMesh(trunkGeo, toon('#a59a80'), N);
@@ -1368,31 +1384,37 @@ function buildStreetLayer(){
     const shadGeo=faceted(new THREE.CircleGeometry(0.5,12)); shadGeo.rotateX(-Math.PI/2); shadGeo.translate(0,0.03,0);
     const shads=new THREE.InstancedMesh(shadGeo, new THREE.MeshBasicMaterial({color:'#20302c',transparent:true,opacity:0.14,depthWrite:false}), N);
     shads.frustumCulled=false;
-    for(let i=0;i<N;i++){ placeOnSurface(dummy,slots[i].dir,0,0); dummy.scale.set(slots[i].s,1,slots[i].s); dummy.updateMatrix(); shads.setMatrixAt(i,dummy.matrix); }
+    for(let i=0;i<N;i++){ placeOnSurface(dummy,slots[i].dir,0,0); dummy.scale.set(slots[i].s*1.35,1,slots[i].s*1.35); dummy.updateMatrix(); shads.setMatrixAt(i,dummy.matrix); }
     planetGroup.add(shads);
   }
-  // ---- Taipei street lights: grey pole + single arm over the roadway ----
+  // ---- Taipei street lights: comfortably above people, sparse and alternating ----
   const lamps=new THREE.Group();
   const poleM=toon('#7c828a'), headM=toon('#fff0c4',{emissive:'#ffcf7a',emissiveIntensity:0.9});
-  let k=0;
-  for(const p of kerbPoints(0.8,0.006)){
-    if((k++%2)===0) continue;                            // alternate kerbs
+  let lampCount=0;
+  for(const p of kerbPoints(1.55,-0.003)){
+    if(p.road.w<0.22) continue;                          // no blanket lighting on tiny local streets
+    const keepSide=((p.roadIndex+p.segmentIndex+p.slot)&1) ? -1 : 1;
+    if(p.side!==keepSide) continue;                      // one pole per interval, alternating kerbs
+    if(!isSidewalkFurniturePoint(p,0.016)) continue;      // never place a pole in a crossing road
     const dir=mapDir(p.x,p.y), h=terrain(dir);
     if(h<WATER+0.55 || h>2.1) continue;
     if(riverCarve(p.x,p.y)>0.3) continue;
-    if(!freeSpot(dir,0.25)) continue;
+    if(Math.hypot(p.x-SPAWN_KM.x,p.y-SPAWN_KM.y)<0.58) continue;
+    if(!freeSpot(dir,0.42)) continue;
     const g=new THREE.Group();
-    const pole=new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.035,0.05,1.9,7)),poleM); pole.position.y=0.95; pole.castShadow=true; g.add(pole);
-    const arm=new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.025,0.03,0.62,6)),poleM);
-    arm.position.set(0,1.86,0.28); arm.rotation.x=Math.PI/2-0.18; g.add(arm);
-    const head=new THREE.Mesh(faceted(new THREE.BoxGeometry(0.1,0.05,0.26)),headM); head.position.set(0,1.94,0.55); g.add(head);
+    const pole=new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.045,0.07,3.55,8)),poleM); pole.position.y=1.775; pole.castShadow=true; g.add(pole);
+    const arm=new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.03,0.038,0.90,7)),poleM);
+    arm.position.set(0,3.49,0.41); arm.rotation.x=Math.PI/2-0.16; g.add(arm);
+    const head=new THREE.Mesh(faceted(new THREE.BoxGeometry(0.14,0.07,0.36)),headM); head.position.set(0,3.63,0.80); g.add(head);
     // aim the arm out over the roadway
     const toRoad=mapDir(p.x - p.side*(-p.ty)*0.05, p.y - p.side*(p.tx)*0.05).sub(dir);
     placeFacing(g,dir,toRoad,0);
     lamps.add(g);
-    claim(dir,0.22);
+    claim(dir,0.42);
+    lampCount++;
   }
-  planetGroup.add(bakeMerge(lamps));
+  window.__streetLights=lampCount;
+  if(lampCount) planetGroup.add(bakeMerge(lamps));
 }
 // --- CITY FLAVOUR: the street-level details that make it feel like Taipei —
 //     parked scooter clusters, YouBike stands, the green+red mailbox pair,
