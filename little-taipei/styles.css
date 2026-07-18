@@ -47,13 +47,17 @@
   #btnSound{top:14px;right:120px;}
   #btnHelp{top:14px;right:66px;}
   #btnLb{top:14px;right:174px;}
+  #btnMenu{display:none;top:10px;right:10px;}
 
   /* ---------- mobile controls ---------- */
   #touch{position:fixed;inset:0;z-index:8;pointer-events:none;display:none;}
-  #joy{position:absolute;left:24px;bottom:24px;width:140px;height:140px;border-radius:50%;
-    background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.5);pointer-events:auto;touch-action:none;}
-  #joyKnob{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;
-    background:rgba(255,255,255,.9);box-shadow:0 4px 0 rgba(0,0,0,.15);}
+  #joyZone{position:absolute;left:0;bottom:0;width:46%;height:68%;pointer-events:auto;touch-action:none;}
+  #joy{position:absolute;width:120px;height:120px;border-radius:50%;
+    background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.45);
+    pointer-events:none;opacity:0;transition:opacity .12s ease;}
+  #joy.live{opacity:1;}
+  #joyKnob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;
+    background:rgba(255,255,255,.8);box-shadow:0 3px 0 rgba(0,0,0,.12);}
   .tbtn{position:absolute;width:74px;height:74px;border-radius:50%;border:3px solid #fff;
     background:rgba(255,255,255,.82);box-shadow:0 6px 0 rgba(0,0,0,.14);pointer-events:auto;
     display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:var(--ink);touch-action:none;}
@@ -104,6 +108,7 @@
   #roomline{position:fixed;left:14px;bottom:14px;z-index:11;font-size:13px;color:#2e3b3a;
     background:rgba(255,255,255,.8);border-radius:12px;padding:7px 12px;border:2px solid #fff;display:none;
     pointer-events:auto;cursor:pointer;font-weight:600;}
+  #roomline.on{display:block;}
   #githubHelp{position:fixed;right:14px;bottom:14px;z-index:11;pointer-events:auto;display:grid;
     grid-template-columns:auto 1fr;align-items:center;gap:10px;width:min(340px,calc(100vw - 28px));padding:10px 13px;border:2px solid #fff;border-radius:14px;
     background:rgba(255,255,255,.86);color:var(--ink);box-shadow:0 5px 0 rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.72);
@@ -117,16 +122,40 @@
   #githubHelp:focus-visible{outline:3px solid var(--sun);outline-offset:3px;}
   @media (max-width:620px){
     .card h1{font-size:30px;}
-    .panel{padding:7px 11px;border-radius:14px;}
-    #score{font-size:15px;top:10px;left:10px;gap:6px;} #score .big{font-size:19px;} #score .star{font-size:18px;}
-    #btnSound{top:10px;right:108px;width:42px;height:42px;font-size:19px;}
-    #btnHelp{top:10px;right:60px;width:42px;height:42px;font-size:19px;}
-    #players{top:10px;right:10px;font-size:14px;}
-    #objective{font-size:14px;top:60px;max-width:92vw;padding:7px 12px;}
-    #objArrow{top:108px;width:46px;height:46px;}
-    #lb{display:none!important;}
-    #roomline{bottom:206px;left:10px;font-size:12px;}
-    #githubHelp{right:10px;bottom:7px;display:block;width:auto;max-width:166px;padding:5px 8px;border-radius:9px;box-shadow:0 3px 0 rgba(0,0,0,.12);}
+    /* row 1 — tiny score, player count (only with company), menu */
+    .panel{padding:6px 10px;border-radius:12px;border-width:2px;box-shadow:0 3px 0 rgba(0,0,0,.1);}
+    #score{top:10px;left:10px;font-size:13px;gap:5px;background:rgba(255,255,255,.72);}
+    #score .big{font-size:17px;} #score .star{font-size:15px;}
+    #score span:nth-child(3){display:none;}
+    #players{display:none;top:10px;right:58px;font-size:12px;gap:6px;background:rgba(255,255,255,.72);}
+    #players.multi{display:flex;}
+    #players .dot{width:9px;height:9px;}
+    /* row 2 — slim objective */
+    #objective{top:54px;font-size:13px;width:max-content;max-width:88vw;padding:6px 12px;gap:7px;background:rgba(255,255,255,.72);}
+    #objective .pin{font-size:15px;}
+    #objArrow{top:102px;width:40px;height:40px;}
+    /* everything secondary lives behind ☰ */
+    #btnMenu{display:flex;width:42px;height:42px;font-size:20px;border-radius:12px;
+      border-width:2px;background:rgba(255,255,255,.72);box-shadow:0 3px 0 rgba(0,0,0,.1);}
+    #btnSound,#btnHelp,#btnLb{display:none;}
+    body.menuOpen #btnSound,body.menuOpen #btnHelp,body.menuOpen #btnLb{display:flex;
+      width:42px;height:42px;font-size:19px;right:10px;border-radius:12px;border-width:2px;}
+    body.menuOpen #btnSound{top:58px;} body.menuOpen #btnHelp{top:106px;} body.menuOpen #btnLb{top:154px;}
+    #lb{right:62px;top:154px;bottom:auto;left:auto;}
+    #roomline.on{display:none;}
+    body.menuOpen #roomline.on{display:block;top:202px;right:10px;left:auto;bottom:auto;font-size:12px;}
+    #githubHelp{display:none;}
+    body.menuOpen #githubHelp{display:block;top:244px;right:10px;left:auto;bottom:auto;
+      width:auto;max-width:180px;padding:7px 10px;border-radius:10px;box-shadow:0 3px 0 rgba(0,0,0,.12);}
     #githubHelp .source,#githubHelp .helpDetail{display:none;}
-    #githubHelp .helpTitle{font-size:10px;line-height:1.15;}
+    #githubHelp .helpTitle{font-size:11px;line-height:1.2;}
+    /* right-edge action stack */
+    .tbtn{border-radius:14px;border-width:2px;background:rgba(255,255,255,.85);box-shadow:0 3px 0 rgba(0,0,0,.12);}
+    #btnAct{width:56px;height:56px;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));font-size:24px;background:var(--sun);}
+    #btnJump{width:56px;height:56px;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));font-size:26px;}
+    #btnEmote{width:44px;height:44px;right:18px;bottom:calc(164px + env(safe-area-inset-bottom));font-size:20px;}
+    #emotes{left:auto;right:70px;bottom:calc(164px + env(safe-area-inset-bottom));transform:none;
+      flex-wrap:wrap;justify-content:flex-end;max-width:252px;}
+    #emotes button{width:44px;height:44px;font-size:20px;border-width:2px;}
+    #prompt{bottom:calc(96px + env(safe-area-inset-bottom));font-size:14px;padding:8px 15px;}
   }

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node scripts/check-city.mjs && node --check main.js && node --check taipei-landmarks.js",
-    "start": "python3 -m http.server 4173"
+    "start": "python3 -m http.server 4173",
+    "deploy": "node deploy-antics.mjs"
   }
 }

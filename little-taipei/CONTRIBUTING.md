@@ -33,6 +33,12 @@ Use `foot` for spacing, `ar` for a simple circular collision area, `face` for cl
 and `labelY` for the floating-label height. Complex walkable compounds can use `cols`, as the
 existing temple and market entries demonstrate.
 
+You never need to fit your model to the planet's curvature: keep the base flat at `y = 0`. The
+runtime lays a curved plaza under the whole footprint and drops buried stone footings from your
+`cols`/`ar` circles down past the curved ground, so walls sit seated while doorways (which have
+no cols) stay open. Set `placement.foundation: false` to opt out, or give it a color string to
+retint the footings.
+
 ## Add or change a road
 
 Edit `roads` in [`city/taipei.js`](city/taipei.js). The runtime creates its sidewalk, asphalt,

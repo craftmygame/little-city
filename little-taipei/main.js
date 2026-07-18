@@ -131,7 +131,9 @@ const windMats=[];                  // leaf shader uniforms for tree sway
 //  Taipei 101 (+X east, +Y north). KM converts km -> planet surface units.
 // =====================================================================
 const CITY_UP    = new THREE.Vector3(0,1,0);
-const CITY_EAST  = new THREE.Vector3(1,0,0);   // +X tangent  = East
+const CITY_EAST  = new THREE.Vector3(-1,0,0);  // -X tangent = East, so (E,N,UP) is right-handed
+                                               // and the city renders true to the real map
+                                               // instead of mirror-imaged (E×N must equal UP).
 const CITY_NORTH = new THREE.Vector3(0,0,1);   // +Z tangent  = North
 const KM = parseFloat(new URLSearchParams(location.search).get('km')) || CITY.planet.unitsPerKm;
 const BASIN = CITY.planet.basinHeight;
@@ -809,7 +811,9 @@ function placeLandmark(builder, xkm, ykm, opts={}){
   const right=new THREE.Vector3().crossVectors(up,fwd).normalize();
   fwd.crossVectors(right,up).normalize();
   out.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right,up,fwd));
-  if(opts.face) out.rotateY(opts.face*Math.PI/180);
+  // negative: with the right-handed (E,N,UP) frame, +Y rotation turns south→east,
+  // so negate to keep `face` meaning clockwise compass degrees (90 = front→west)
+  if(opts.face) out.rotateY(-opts.face*Math.PI/180);
   out.position.copy(dir).multiplyScalar(groundR(dir)+(opts.extra||0));
   // Keep architecture level. Bending every vertex to the globe made roofs,
   // door heads and long podiums visibly bow. The recessed authored base and
@@ -818,10 +822,39 @@ function placeLandmark(builder, xkm, ykm, opts={}){
     const bb=new THREE.Box3().setFromObject(grp);
     if(isFinite(bb.min.x) && isFinite(bb.max.x)){
       const cx=(bb.min.x+bb.max.x)/2, cz=(bb.min.z+bb.max.z)/2;
-      const hx=Math.max(0.6,(bb.max.x-bb.min.x)*0.46), hz=Math.max(0.6,(bb.max.z-bb.min.z)*0.46);
-      // raise cancels opts.extra so the plaza always lands at ground level even when the model is sunk
-      out.add(curvedPlaza(cx-hx,cx+hx,cz-hz,cz+hz, groundR(dir), opts.base||'#dcd6c8', {raise:0.06-(opts.extra||0)}));
+      // cover the FULL footprint plus an apron: every flat-authored edge must land on the
+      // plaza — the old 92%-of-bbox cover left the outermost slab edges hanging over bare
+      // curved terrain (visible as a floating ledge at Taipei 101's forecourt)
+      const hx=(bb.max.x-bb.min.x)/2+0.45, hz=(bb.max.z-bb.min.z)/2+0.45;
+      // raise cancels opts.extra so the plaza always lands at ground level even when the
+      // model is sunk; 0.075 keeps it just proud of the road ribbons (asphalt sits at 0.06)
+      const plaza=curvedPlaza(cx-hx,cx+hx,cz-hz,cz+hz, groundR(dir), opts.base||'#dcd6c8', {raise:0.075-(opts.extra||0)});
+      if(out===grp && opts.scale) plaza.scale.setScalar(1/opts.scale);   // unmerged hosts keep their authored scale; the plaza is built in world units
+      out.add(plaza);
     }
+  }
+  // ---- automatic buried foundation: walls that continue down into the planet.
+  // A flat-authored base only touches the round ground at its centre — the corners of
+  // a W-wide footprint hang ≈W²/8R above the curve. The collider circles every
+  // landmark must author already trace its walls and piers (doorways are deliberately
+  // left uncovered), so each circle drops a stone footing from just beneath the base
+  // slab to below the plaza. Flat shells meet the curved ground everywhere, no
+  // architecture is bent, and future landmarks inherit this for free.
+  // placement.foundation:false opts out; a color string retints it.
+  if(opts.foundation!==false && (opts.cols||opts.ar)){
+    const sc=opts.scale||1, gr=groundR(dir);
+    const rings=(opts.cols||[{x:0,z:0,r:opts.ar}]).map(c=>({x:c.x*sc,z:c.z*sc,r:c.r*sc+0.3}));
+    const geos=rings.map((c,i)=>{
+      const far=Math.hypot(c.x,c.z)+c.r, h=far*far/(2*gr)+0.6;    // deep enough for the sag at the footing's far edge
+      const geo=new THREE.CylinderGeometry(c.r,c.r,h,18);
+      geo.translate(c.x, 0.05-(i%4)*0.012-h/2, c.z);              // staggered tops: coplanar caps of overlapping footings would z-fight
+      return geo.toNonIndexed();
+    });
+    const fnd=new THREE.Mesh(mergeGeometries(geos,false), toon(typeof opts.foundation==='string'?opts.foundation:'#a8a195'));
+    fnd.geometry.computeVertexNormals();
+    fnd.castShadow=true; fnd.receiveShadow=true;
+    if(out===grp && opts.scale) fnd.scale.setScalar(1/opts.scale); // same world-units compensation as the plaza
+    out.add(fnd);
   }
   planetGroup.add(out);
   // colliders: either a list of local-space circles (walkable compounds — the player can
@@ -859,7 +892,9 @@ function surfaceRibbon(rawPts, widthKm, color, yOff, opts={}){
     pL=L; pR=Rr;
   }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(geoPos,3)); g.computeVertexNormals();
-  const mat=opts.mat||toon(color,opts.toonOpts||{}); const mesh=new THREE.Mesh(g,mat); mesh.receiveShadow=true; if(opts.renderOrder)mesh.renderOrder=opts.renderOrder;
+  const mat=opts.mat||toon(color,opts.toonOpts||{});
+  mat.side=THREE.DoubleSide;   // ribbon winding depends on map chirality — keep both faces
+  const mesh=new THREE.Mesh(g,mat); mesh.receiveShadow=true; if(opts.renderOrder)mesh.renderOrder=opts.renderOrder;
   planetGroup.add(mesh); return mesh;
 }
 function cylBetween(a,b,r,mat){ const d=b.clone().sub(a), len=d.length(); const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,6),mat); m.position.copy(a).addScaledVector(d,0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), d.clone().normalize()); m.castShadow=true; return m; }
@@ -874,16 +909,16 @@ function buildRoads(){
   const mat=toon('#7e7a72'), lineMat=toon('#e9e4d6'), walkMat=toon('#cfc8b6');
   for(const Rd of BLVD){
     surfaceRibbon(Rd.pts, Rd.w+0.11, null, 0.028, {mat:walkMat, subdiv:5}); // pale sidewalk apron each side
-    surfaceRibbon(Rd.pts, Rd.w, null, 0.035, {mat, subdiv:5});           // the asphalt
-    surfaceRibbon(Rd.pts, 0.03, null, 0.05, {mat:lineMat, subdiv:6});    // faint centre line
+    surfaceRibbon(Rd.pts, Rd.w, null, 0.06, {mat, subdiv:5});            // the asphalt (clear of the apron: no z-fight)
+    surfaceRibbon(Rd.pts, 0.03, null, 0.10, {mat:lineMat, subdiv:6});    // faint centre line
   }
 }
 // --- MRT lines (official colours)
 function buildMRT(){
   for(const line of CITY.transit.metroLines){
     const pts=warpPts(line.path);
-    const mat=toon(line.color,{emissive:line.color,emissiveIntensity:0.18});
-    surfaceRibbon(pts, 0.09, null, 0.085, {mat, renderOrder:2, subdiv:5});
+    const mat=toon(line.color,{emissive:line.color,emissiveIntensity:0.12});
+    surfaceRibbon(pts, 0.045, null, 0.14, {mat, renderOrder:2, subdiv:5});
   }
 }
 
@@ -1441,6 +1476,24 @@ function buildCityFlavour(){
   for(let i=0;i<7;i++){ const at=takeKerb(0.9); if(at) placeKerb(makeYouBike(), at, true); }
   for(let i=0;i<6;i++){ const at=takeKerb(0.6); if(at) placeKerb(makeMailboxPair(), at, true); }
   for(let i=0;i<6;i++){ const at=takeKerb(1.1); if(at) placeKerb(makeMRTEntrance(), at, true); }
+
+  // ---- authored MRT stations (real km): Taipei City Hall on Zhongxiao E Rd,
+  //      Taipei 101/World Trade Center on Xinyi Rd at Keelung Rd.
+  for(const [ax,ay,tx,ty] of [
+    [0.02,1.31, 0.02,1.55],      // Taipei City Hall stn — south kerb exit
+    [-0.12,1.79, -0.12,1.55],    // Taipei City Hall stn — north kerb exit
+    [-0.66,-0.43, -0.7,-0.62],   // Taipei 101/WTC stn — Xinyi Rd north kerb
+  ]){
+    const w=warpKm(ax,ay);
+    const dir=mapDir(w.x,w.y);
+    if(!freeSpot(dir,0.9)) continue;
+    const res=makeMRTEntrance();
+    const wt=warpKm(tx,ty);
+    placeFacing(res.obj, dir, mapDir(wt.x,wt.y).sub(dir), 0);
+    planetGroup.add(bakeMerge(res.obj));
+    colliders.push({dir:dir.clone(), ar:(res.ar*0.8)/R, h:res.h});
+    claim(dir, res.ar*1.05);
+  }
   { const at=takeKerb(1.2); if(at){ placeKerb(makeGarbageTruck(), at, false);
       garbageTruckPos=at.dir.clone().multiplyScalar(groundR(at.dir)); } }
 
@@ -2665,6 +2718,7 @@ function tryJump(){ if(grounded && started){ vVel=JUMP; grounded=false; doSquash
 // intentionally authored like Abeto: yaw follows the runner and pitch is fixed.
 let dragging=false, lastX=0,lastY=0, downX=0,downY=0, movedFar=false;
 renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#touch')) return;
+  document.body.classList.remove('menuOpen');
   dragging=true; lastX=e.clientX; lastY=e.clientY; downX=e.clientX; downY=e.clientY; movedFar=false; });
 addEventListener('pointermove',e=>{ if(!dragging) return;
   lastX=e.clientX; lastY=e.clientY;
@@ -2688,16 +2742,24 @@ const joy=document.getElementById('joy'), knob=document.getElementById('joyKnob'
 let touchActive=false, joyId=null, joyCx=0,joyCy=0;
 function isTouch(){ return matchMedia('(pointer:coarse)').matches || 'ontouchstart' in window; }
 function setupTouch(){
-  joy.addEventListener('pointerdown',e=>{ joyId=e.pointerId; const r=joy.getBoundingClientRect(); joyCx=r.left+r.width/2; joyCy=r.top+r.height/2; try{joy.setPointerCapture(e.pointerId);}catch(_){} touchActive=true; moveJoy(e); });
-  joy.addEventListener('pointermove',e=>{ if(e.pointerId===joyId) moveJoy(e); });
-  const end=e=>{ if(e.pointerId===joyId){ joyId=null; touchActive=false; inputMove=0; inputTurn=0; knob.style.transform='translate(-50%,-50%)'; } };
-  joy.addEventListener('pointerup',end); joy.addEventListener('pointercancel',end);
+  // Floating joystick: invisible until the thumb lands anywhere in the lower-left
+  // zone, then it appears centred under the touch point (abeto-style clean screen).
+  const zone=document.getElementById('joyZone');
+  zone.addEventListener('pointerdown',e=>{ joyId=e.pointerId; joyCx=e.clientX; joyCy=e.clientY;
+    const half=(joy.offsetWidth||120)/2;
+    joy.style.left=(joyCx-half)+'px'; joy.style.top=(joyCy-half)+'px'; joy.classList.add('live');
+    document.body.classList.remove('menuOpen');
+    try{zone.setPointerCapture(e.pointerId);}catch(_){} touchActive=true; moveJoy(e); });
+  zone.addEventListener('pointermove',e=>{ if(e.pointerId===joyId) moveJoy(e); });
+  const end=e=>{ if(e.pointerId===joyId){ joyId=null; touchActive=false; inputMove=0; inputTurn=0; knob.style.transform='translate(-50%,-50%)'; joy.classList.remove('live'); } };
+  zone.addEventListener('pointerup',end); zone.addEventListener('pointercancel',end);
   function moveJoy(e){ let dx=e.clientX-joyCx, dy=e.clientY-joyCy; const mag=Math.hypot(dx,dy)||1; const max=52; const cl=Math.min(mag,max);
     const nx=dx/mag*cl, ny=dy/mag*cl; knob.style.transform=`translate(calc(-50% + ${nx}px), calc(-50% + ${ny}px))`;
     inputMove=-ny/max; inputTurn=nx/max; }
   document.getElementById('btnJump').addEventListener('pointerdown',e=>{e.preventDefault();tryJump();});
   document.getElementById('btnAct').addEventListener('pointerdown',e=>{e.preventDefault();doInteract();});
   document.getElementById('btnEmote').addEventListener('pointerdown',e=>{e.preventDefault();toggleEmotes();});
+  document.getElementById('btnMenu').addEventListener('click',()=>document.body.classList.toggle('menuOpen'));
 }
 setupTouch();
 
@@ -2854,7 +2916,7 @@ function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag);
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
 function setupRoom(){
   adoptMyId(room.me && room.me.id);  // colour our avatar by our network id
-  const rl=document.getElementById('roomline'); rl.style.display='block';
+  const rl=document.getElementById('roomline'); rl.classList.add('on');
   rl.onclick=()=>{ if(room&&room.link&&navigator.clipboard) navigator.clipboard.writeText(room.link).then(()=>toast('🔗 link copied!')); };
   updatePlayerCount();
   room.onJoin(p=>{ if(!isSelfPlayer(p)) toast('✨ a runner arrived'); updatePlayerCount(); });
@@ -2869,7 +2931,9 @@ function setupRoom(){
   room.on('emote',(payload,from)=>{ const r=remote.get(from); if(r&&payload&&payload.e) spawnEmote(payload.e,r.group); });
   refreshLeaderboard();
 }
-function updatePlayerCount(){ const el=document.getElementById('playerCount'); if(el) el.textContent = room? Math.max(1,room.players.length) : 1; }
+function updatePlayerCount(){ const n=room? Math.max(1,room.players.length) : 1;
+  const el=document.getElementById('playerCount'); if(el) el.textContent=n;
+  const pp=document.getElementById('players'); if(pp) pp.classList.toggle('multi',n>1); }
 let _lbT=0;
 function refreshLeaderboardThrottled(){ const n=performance.now(); if(n-_lbT<1000) return; _lbT=n; refreshLeaderboard(); }
 function refreshLeaderboard(){ if(!room) return;
@@ -3041,12 +3105,15 @@ addEventListener('resize',resize);
 
 renderer.compile(scene,camera);
 document.getElementById('loader').style.display='none';
-if(isTouch()) touchEl.style.display='block';
+if(isTouch()){ touchEl.style.display='block';
+  const k=document.querySelector('#intro .keys');
+  if(k) k.innerHTML='<span>left thumb — walk</span><span>drag right side — look</span><span>✋ — interact</span>';
+}
 tw(document.body);                 // twemojify all static UI
 animate();
 
 const beginBtn=document.getElementById('beginBtn');
-const SHOW_WELCOME_DURING_IMMERSION_QA=true;
+const SHOW_WELCOME_DURING_IMMERSION_QA=true;   // set false to skip the name screen while checking
 beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
   document.getElementById('intro').style.display='none';

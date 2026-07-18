@@ -35,7 +35,8 @@ function buildTaipei101(CTX){
 
   // Walkable podium lobby. The old podium was one sealed solid box with doors
   // painted on its face; this U-shell leaves a real street-level opening.
-  g.add(CTX.box(9.40,0.08,7.40,lobbyFloor,0,0.04,0));                    // broad public floor / forecourt edge
+  g.add(CTX.box(9.20,0.08,7.30,lobbyFloor,0,0.04,0));                    // broad public floor, hugging the shell footprint
+  g.add(CTX.box(3.70,0.30,0.60,stoneDark,0,-0.10,3.55));                 // portal threshold step onto the curved plaza
   g.add(CTX.box(9.00,4.10,0.22,stone,0,2.10,-3.42));                     // rear wall
   g.add(CTX.box(0.22,4.10,6.85,stone,-4.42,2.10,0));                     // side walls
   g.add(CTX.box(0.22,4.10,6.85,stone, 4.42,2.10,0));
@@ -684,15 +685,31 @@ function buildSYSHall(CTX){
   A(CTX.box(5.4, 0.30, 5.4, stoneD, 0, 0.47, 0));
   for (let i = 0; i < 5; i++) A(CTX.box(2.7 - i*0.08, 0.062, 0.30, stone, 0, 0.031 + i*0.062, 3.35 - i*0.26));
   const podTop = 0.62;
-  // body + four huge red corner piers
+  // body as a U-shell (not a sealed cube): the memorial chamber is walkable
   const bodyW = 3.9, bodyH = 1.95;
-  A(CTX.box(bodyW, bodyH, bodyW, cream, 0, podTop + bodyH/2, 0));
+  A(CTX.box(bodyW, bodyH, 0.24, cream, 0, podTop + bodyH/2, -(bodyW/2 - 0.12)));  // back wall
+  A(CTX.box(0.24, bodyH, bodyW, cream, -(bodyW/2 - 0.12), podTop + bodyH/2, 0));  // side walls
+  A(CTX.box(0.24, bodyH, bodyW, cream,  (bodyW/2 - 0.12), podTop + bodyH/2, 0));
+  A(CTX.box(1.05, bodyH, 0.24, cream, -1.42, podTop + bodyH/2, bodyW/2 - 0.12));  // front wings
+  A(CTX.box(1.05, bodyH, 0.24, cream,  1.42, podTop + bodyH/2, bodyW/2 - 0.12));
+  A(CTX.box(bodyW, 0.36, bodyW, cream, 0, podTop + bodyH - 0.18, 0));             // ceiling slab spans the shell
   for (const sx of [-1, 1]) for (const sz of [-1, 1])
     A(CTX.box(0.60, bodyH + 0.22, 0.60, pier, sx*(bodyW/2 - 0.02), podTop + (bodyH + 0.22)/2, sz*(bodyW/2 - 0.02)));
-  // front porch: red columns + glass entrance under a beam
+  // the memorial chamber: statue of Sun Yat-sen facing the south doors
+  const warm = CTX.toon('#f3e2b8', { emissive:'#e8c987', emissiveIntensity:0.35 });
+  const bronze = CTX.toon('#6d5b3f'), carpet = CTX.toon('#a63a30');
+  A(CTX.box(3.3, 0.05, 3.3, stoneD, 0, podTop + 0.025, 0));                       // chamber floor
+  A(CTX.box(3.2, 1.45, 0.06, warm, 0, podTop + 0.85, -(bodyW/2 - 0.28)));         // lit memorial wall
+  A(CTX.box(0.8, 0.035, 2.7, carpet, 0, podTop + 0.055, 0.45));                   // red carpet to the doors
+  A(CTX.box(1.1, 0.5, 0.7, stone, 0, podTop + 0.25, -1.15));                      // pedestal
+  A(CTX.box(0.62, 0.62, 0.4, bronze, 0, podTop + 0.81, -1.18));                   // seated figure
+  A(CTX.box(0.5, 0.28, 0.42, bronze, 0, podTop + 0.62, -0.95));
+  A(CTX.sph(0.17, bronze, 0, podTop + 1.24, -1.18, 8));
+  // front porch: red columns + door jambs framing the open entrance
   for (const x of [-1.25, -0.62, 0.62, 1.25]) A(CTX.cyl(0.10, 0.115, bodyH, pier, x, podTop + bodyH/2, bodyW/2 + 0.34, 10));
   A(CTX.box(2.95, 0.18, 0.85, roofSh, 0, podTop + bodyH + 0.02, bodyW/2 + 0.12));
-  A(CTX.box(1.75, 1.95, 0.08, glass, 0, podTop + 0.99, bodyW/2 + 0.03));
+  A(CTX.box(0.14, 1.72, 0.14, dark, -0.92, podTop + 0.86, bodyW/2 - 0.06));
+  A(CTX.box(0.14, 1.72, 0.14, dark,  0.92, podTop + 0.86, bodyW/2 - 0.06));
   A(CTX.box(1.95, 0.10, 0.10, dark,  0, podTop + 1.98, bodyW/2 + 0.04));
   // side + rear window bands
   for (const s of [-1, 1]) A(CTX.box(0.06, 0.9, 2.4, glass, s*(bodyW/2 + 0.01), podTop + 1.05, 0));
@@ -717,6 +734,200 @@ function buildSYSHall(CTX){
     cp.add(CTX.cone(0.15, 0.5, roofHi, 0, 2*L*st + 0.22, L*ct, 8));
     g.add(cp);
   }
+  // --- south entrance plaza toward Ren'ai Rd: broad pavers, paired stone gate
+  //     piers, clipped hedges and a few palms (street-view: the wide forecourt
+  //     with red kerb and flanking gate pillars).
+  const hedge = CTX.toon('#4f7a4a'), palmG = CTX.toon('#4c8b4f'), palmT = CTX.toon('#8a7355');
+  A(CTX.box(5.2, 0.05, 3.0, stone,  0, 0.025, 4.7));                  // plaza apron
+  A(CTX.box(2.6, 0.06, 3.0, stoneD, 0, 0.055, 4.7));                  // central walk
+  for (const sx of [-1, 1]){
+    A(CTX.box(0.55, 1.25, 0.55, stone, sx*2.35, 0.62, 5.0));          // gate pier
+    A(CTX.box(0.72, 0.10, 0.72, stoneD, sx*2.35, 1.30, 5.0));         // cap slab
+    const cap = CTX.cone(0.52, 0.30, roofSh, sx*2.35, 1.50, 5.0, 4);  // little hip cap
+    cap.rotation.y = Math.PI/4; A(cap);
+    A(CTX.box(1.65, 0.28, 0.30, hedge, sx*1.95, 0.17, 4.0));          // clipped hedges
+    A(CTX.box(0.30, 0.28, 1.30, hedge, sx*2.52, 0.17, 3.2));
+  }
+  for (const [px, pz] of [[-1.9, 5.9], [1.9, 5.9], [-2.6, 4.3]]){     // palms
+    A(CTX.cyl(0.055, 0.075, 1.35, palmT, px, 0.68, pz, 6));
+    const crown = CTX.sph(0.34, palmG, px, 1.45, pz, 7); crown.scale.y = 0.5; A(crown);
+    A(CTX.cone(0.10, 0.34, palmG, px, 1.58, pz, 5));
+  }
+  return g;
+}
+
+// ---------------------------------------------------------------------
+//  TAIPEI DOME — giant flattened silver saucer over a glazed retail
+//  arcade (street view: tree-lined arcade with bronze shopfront band
+//  facing Zhongxiao E Rd; "TAIPEI DOME" lettering on the roof rim).
+// ---------------------------------------------------------------------
+function buildTaipeiDome(CTX){
+  const T = CTX.THREE; const g = CTX.group(); const A = m => (g.add(m), m);
+  const plinth = CTX.toon('#cfd0d4'), pier = CTX.toon('#e8e9ea');
+  const shopGlass = CTX.toon('#3b4148', { emissive:'#57503c', emissiveIntensity:0.18 });
+  const fascia = CTX.toon('#8a7250'), drumM = CTX.toon('#dfe1e3'), band = CTX.toon('#f2f3f4');
+  const roofM = CTX.toon('#9aa0a6', { side: T.DoubleSide }), roofHi = CTX.toon('#b9bec3');
+  const sign = CTX.toon('#f4f5f6', { emissive:'#ffffff', emissiveIntensity:0.22 });
+  const leafM = CTX.toon('#5f8a56'), trunkM = CTX.toon('#9a8a70');
+  const grass = CTX.toon('#5da24f'), infield = CTX.toon('#c9a06a'), chalk = CTX.toon('#f2efe4');
+  const seatM = CTX.toon('#3f6b7d', { side: T.DoubleSide }), seatD = CTX.toon('#35596a', { side: T.DoubleSide });
+  const halo = CTX.toon('#fff3cf', { emissive:'#ffe9a8', emissiveIntensity:0.55, side: T.DoubleSide });
+  const oval = (m) => (m.scale.x = 1.16, m);
+  const GAP = 0.42;                          // entrance arc (rad), centred on +Z
+
+  A(oval(CTX.cyl(3.75, 3.85, 0.16, plinth, 0, 0.08, 0, 24)));               // plinth
+  // C-shaped glazed arcade drum — a REAL street opening faces +Z, so the
+  // player can walk off Zhongxiao straight onto the field concourse.
+  const drum = CTX.mesh(CTX.faceted(new T.CylinderGeometry(3.35, 3.4, 1.35, 24, 1, true, GAP, Math.PI*2 - GAP*2)), shopGlass, 0, 0.835, 0);
+  oval(drum); A(drum);
+  for (let i = 0; i < 20; i++){                                             // white piers (none across the doorway)
+    const th = -Math.PI + i * (Math.PI * 2 / 20);
+    if (Math.abs(th) < GAP + 0.12) continue;
+    const p = CTX.box(0.16, 1.35, 0.16, pier, Math.sin(th) * 3.42 * 1.16, 0.835, Math.cos(th) * 3.42);
+    p.rotation.y = th; A(p);
+  }
+  for (const s of [-1, 1])                                                  // portal jambs + lintel
+    A(CTX.box(0.2, 1.35, 0.2, band, Math.sin(s * GAP) * 3.42 * 1.16, 0.835, Math.cos(s * GAP) * 3.42));
+  A(CTX.box(3.3, 0.16, 0.22, band, 0, 1.45, 3.32));
+  A(oval(CTX.cyl(3.48, 3.48, 0.2, fascia, 0, 1.61, 0, 24)));                // bronze sign band
+  A(oval(CTX.cyl(3.3, 3.42, 0.62, drumM, 0, 2.02, 0, 24)));                 // white concourse band
+  A(oval(CTX.cyl(3.5, 3.5, 0.12, band, 0, 2.39, 0, 24)));                   // rim ring
+  // the saucer — top hemisphere only (double-sided), so inside you look up
+  // into the grey bowl instead of clipping a sphere's belly
+  const domeR = CTX.mesh(CTX.faceted(new T.SphereGeometry(3.62, 22, 9, 0, Math.PI*2, 0, Math.PI/2)), roofM, 0, 2.42, 0);
+  domeR.scale.set(1.2, 0.5, 1.04); A(domeR);
+  const cap = CTX.mesh(CTX.faceted(new T.SphereGeometry(2.0, 16, 6, 0, Math.PI*2, 0, Math.PI/2)), roofHi, 0, 3.36, 0);
+  cap.scale.set(1.2, 0.36, 1.04); A(cap);
+  const namep = CTX.box(2.3, 0.22, 0.08, sign, 0, 2.62, 3.5); namep.rotation.x = -0.42; A(namep);  // TAIPEI DOME strip
+  A(CTX.sph(0.1, band, 0, 4.32, 0, 8));
+  // --- inside: the ballpark — outfield, infield diamond, mound, seat bowl ---
+  A(oval(CTX.cyl(2.85, 2.85, 0.05, grass, 0, 0.19, 0, 24)));
+  const dia = CTX.box(1.5, 0.045, 1.5, infield, 0, 0.215, 0.9); dia.rotation.y = Math.PI/4; A(dia);
+  A(CTX.cyl(0.2, 0.24, 0.05, infield, 0, 0.24, 0.9, 10));                   // mound
+  for (const [bx, bz] of [[0, 1.66], [-0.74, 0.9], [0.74, 0.9], [0, 0.14]])
+    A(CTX.box(0.14, 0.05, 0.14, chalk, bx, 0.245, bz));                     // plate + bases
+  const bowl = CTX.mesh(CTX.faceted(new T.CylinderGeometry(3.08, 2.72, 0.62, 24, 1, true, GAP + 0.2, Math.PI*2 - (GAP + 0.2)*2)), seatM, 0, 0.55, 0);
+  oval(bowl); A(bowl);
+  const bowl2 = CTX.mesh(CTX.faceted(new T.CylinderGeometry(2.68, 2.46, 0.3, 24, 1, true, GAP + 0.35, Math.PI*2 - (GAP + 0.35)*2)), seatD, 0, 0.36, 0);
+  oval(bowl2); A(bowl2);
+  const ring = CTX.mesh(CTX.faceted(new T.CylinderGeometry(2.4, 2.4, 0.09, 24, 1, true)), halo, 0, 2.56, 0);
+  oval(ring); A(ring);                                                      // floodlight halo over the field
+  // arcade tree row along the front, clear of the doorway (street view)
+  for (const tx of [-3.1, -2.0, 2.0, 3.1]){
+    A(CTX.cyl(0.05, 0.07, 0.75, trunkM, tx, 0.38, 3.62, 6));
+    const c1 = CTX.sph(0.38, leafM, tx, 0.98, 3.62, 7); c1.scale.y = 0.85; A(c1);
+    A(CTX.sph(0.24, leafM, tx + 0.12, 1.26, 3.58, 6));
+  }
+  return g;
+}
+
+// ---------------------------------------------------------------------
+//  GRAND HYATT TAIPEI — cream stepped slab hotel with banded windows
+//  and a porte-cochère, north of Songshou Rd facing the 101 block.
+// ---------------------------------------------------------------------
+function buildGrandHyatt(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const cream = CTX.toon('#e8e0cc'), creamD = CTX.toon('#d6ccb4'), win = CTX.toon('#5a6b74');
+  const trim = CTX.toon('#f0e9d8'), glass = CTX.toon('#7fa6b5'), dark = CTX.toon('#3f4b56');
+  A(CTX.box(5.3, 0.22, 2.9, creamD, 0, 0.11, 0));                            // base
+  const wing = (cx, w, h, y0) => {
+    const b = y0 || 0.22;
+    A(CTX.box(w, h, 2.3, cream, cx, b + h/2, 0));
+    const rows = Math.floor(h / 0.52);
+    for (let i = 1; i <= rows; i++) A(CTX.box(w + 0.04, 0.16, 2.2, win, cx, b + i*0.52 - 0.14, 0));
+    A(CTX.box(w + 0.08, 0.10, 2.38, trim, cx, b + 0.02 + h, 0));
+  };
+  wing(0, 2.4, 3.4, 1.42); wing(-2.0, 1.6, 3.4); wing(2.0, 1.6, 3.4);        // centre rises over an open lobby
+  // ground-floor lobby shell: back wall + side piers, the front stays open
+  A(CTX.box(2.4, 1.2, 0.2, cream, 0, 0.82, -1.05));
+  A(CTX.box(0.26, 1.2, 2.3, cream, -1.07, 0.82, 0));
+  A(CTX.box(0.26, 1.2, 2.3, cream,  1.07, 0.82, 0));
+  const glow = CTX.toon('#f6e7c4', { emissive:'#eccf8e', emissiveIntensity:0.4 });
+  const gold = CTX.toon('#c9a44e');
+  A(CTX.box(2.1, 0.04, 1.95, trim, 0, 0.24, 0));                             // marble lobby floor
+  A(CTX.box(2.2, 1.1, 0.05, glow, 0, 0.79, -0.92));                          // warm lobby wall
+  A(CTX.box(1.0, 0.42, 0.32, gold, -0.45, 0.45, -0.55));                     // reception desk
+  A(CTX.box(0.3, 0.6, 0.3, creamD, 0.65, 0.52, -0.5));                       // luggage cart nook
+  A(CTX.box(0.62, 1.0, 0.1, glass, -0.88, 0.74, 1.12));                      // glazing beside the doors
+  A(CTX.box(0.62, 1.0, 0.1, glass,  0.88, 0.74, 1.12));
+  A(CTX.box(1.9, 0.14, 1.15, trim, 0, 1.5, 1.7));                            // porte-cochère canopy
+  for (const sx of [-0.8, 0.8]) A(CTX.cyl(0.06, 0.07, 1.3, creamD, sx, 0.85, 2.1, 8));
+  A(CTX.box(1.1, 0.5, 0.9, creamD, 0, 5.05, -0.4));                          // rooftop plant
+  return g;
+}
+
+// ---------------------------------------------------------------------
+//  BREEZE NAN SHAN — the sleek rounded glass tower east of Taipei 101,
+//  teal curtain wall over a low retail podium.
+// ---------------------------------------------------------------------
+function buildBreezeNanShan(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const glass = CTX.toon('#6fa3ad'), glassHi = CTX.toon('#8dbcc2'), slab = CTX.toon('#c9cdd0');
+  const podM = CTX.toon('#d9d4c8'), podGlass = CTX.toon('#46585c'), crown = CTX.toon('#e8eaec');
+  A(CTX.box(3.3, 0.18, 2.6, podM, 0, 0.09, 0));                              // podium plinth
+  // retail podium as a shell — walk in through the front to the atrium
+  A(CTX.box(3.0, 1.15, 0.24, podM, 0, 0.75, -1.03));                         // back
+  A(CTX.box(0.24, 1.15, 2.3, podM, -1.38, 0.75, 0));                         // sides
+  A(CTX.box(0.24, 1.15, 2.3, podM,  1.38, 0.75, 0));
+  A(CTX.box(0.8, 1.15, 0.24, podM, -1.1, 0.75, 1.03));                       // front wings
+  A(CTX.box(0.8, 1.15, 0.24, podM,  1.1, 0.75, 1.03));
+  const shopGlow = CTX.toon('#eadfc2', { emissive:'#e0c98e', emissiveIntensity:0.4 });
+  const shelf = CTX.toon('#b9a274');
+  A(CTX.box(2.5, 0.04, 1.9, slab, 0, 0.2, 0));                               // atrium floor
+  A(CTX.box(2.6, 0.95, 0.05, shopGlow, 0, 0.68, -0.9));                      // lit shop wall
+  A(CTX.cyl(0.42, 0.46, 1.2, podM, 0, 0.78, -0.3, 10));                      // tower core
+  A(CTX.box(0.6, 0.5, 0.3, shelf, -0.95, 0.45, -0.35));                      // boutique counters
+  A(CTX.box(0.6, 0.5, 0.3, shelf,  0.95, 0.45, -0.35));
+  A(CTX.box(0.55, 0.9, 0.1, podGlass, -1.0, 0.66, 1.14));                    // storefront glazing
+  A(CTX.box(0.55, 0.9, 0.1, podGlass,  1.0, 0.66, 1.14));
+  A(CTX.box(3.1, 0.1, 2.4, slab, 0, 1.38, 0));
+  const H = 11.6, R0 = 1.05;                                                 // rounded tower shaft
+  const shaft = CTX.cyl(R0, R0 + 0.06, H, glass, 0, 1.43 + H/2, 0, 12);
+  shaft.scale.z = 0.82; A(shaft);
+  for (let i = 1; i <= 13; i++){                                             // horizontal slab lines
+    const ring = CTX.cyl(R0 + 0.045, R0 + 0.045, 0.05, slab, 0, 1.43 + (H * i / 14), 0, 12);
+    ring.scale.z = 0.82; A(ring);
+  }
+  const face = CTX.box(0.7, H * 0.86, 0.06, glassHi, 0, 1.43 + H/2, 0.9);    // brighter front reveal
+  A(face);
+  const cr = CTX.cyl(0.72, R0, 0.85, crown, 0, 1.43 + H + 0.42, 0, 12);      // tapering crown
+  cr.scale.z = 0.82; A(cr);
+  A(CTX.cyl(0.5, 0.6, 0.3, slab, 0, 1.43 + H + 1.0, 0, 10));
+  return g;
+}
+
+// ---------------------------------------------------------------------
+//  SHIN KONG MITSUKOSHI XINYI PLACE A11 — boxy department store with the
+//  big corner LED billboard and a stone-band facade.
+// ---------------------------------------------------------------------
+function buildMitsukoshiA11(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const stone = CTX.toon('#cbc2b0'), stoneD = CTX.toon('#b3a993'), glass = CTX.toon('#46585c');
+  const led = CTX.toon('#20262c', { emissive:'#3a86ff', emissiveIntensity:0.28 });
+  const ledDash = CTX.toon('#ffd166', { emissive:'#ffd166', emissiveIntensity:0.5 });
+  const trim = CTX.toon('#e6e0d2'), redM = CTX.toon('#a33434');
+  A(CTX.box(3.7, 0.16, 2.8, trim, 0, 0.08, 0));                              // plinth
+  A(CTX.box(3.4, 1.56, 2.5, stone, 0, 1.88, 0));                             // upper floors over an open ground hall
+  for (const y of [1.24, 1.6, 2.25]) A(CTX.box(3.46, 0.12, 2.56, stoneD, 0, y, 0));
+  // ground-floor shell: shop hall behind the vitrines, door in the middle
+  A(CTX.box(3.4, 1.1, 0.2, stone, 0, 0.71, -1.15));                          // back
+  A(CTX.box(0.2, 1.1, 2.5, stone, -1.6, 0.71, 0));                           // sides
+  A(CTX.box(0.2, 1.1, 2.5, stone,  1.6, 0.71, 0));
+  A(CTX.box(0.9, 1.1, 0.2, stone, -1.25, 0.71, 1.15));                       // front wings
+  A(CTX.box(0.9, 1.1, 0.2, stone,  1.25, 0.71, 1.15));
+  const hallGlow = CTX.toon('#f2e6c8', { emissive:'#e6cf93', emissiveIntensity:0.4 });
+  const counter = CTX.toon('#8a6b4e');
+  A(CTX.box(2.9, 0.04, 2.1, trim, 0, 0.18, 0));                              // polished hall floor
+  A(CTX.box(3.0, 0.9, 0.05, hallGlow, 0, 0.63, -1.02));                      // lit cosmetics wall
+  A(CTX.box(0.5, 0.45, 1.2, counter, -0.9, 0.4, -0.2));                      // counters
+  A(CTX.box(0.5, 0.45, 1.2, counter,  0.9, 0.4, -0.2));
+  A(CTX.box(0.7, 0.62, 0.1, glass, -0.85, 0.5, 1.26));                       // street-level vitrines
+  A(CTX.box(0.7, 0.62, 0.1, glass,  0.85, 0.5, 1.26));
+  A(CTX.box(1.5, 1.15, 0.1, led, -0.75, 1.95, 1.27));                        // LED billboard
+  for (let i = 0; i < 3; i++) A(CTX.box(0.9 - i*0.22, 0.07, 0.04, ledDash, -0.75, 1.62 + i*0.34, 1.33));
+  A(CTX.box(0.7, 0.3, 0.08, redM, 1.05, 2.35, 1.27));                        // house sign
+  A(CTX.box(3.5, 0.14, 2.6, trim, 0, 2.72, 0));                              // parapet
+  A(CTX.box(1.2, 0.32, 0.9, stoneD, -0.6, 2.92, -0.5));                      // roof plant
   return g;
 }
 function buildCityHall(CTX){
@@ -738,8 +949,18 @@ function buildCityHall(CTX){
     A(CTX.box(1.1, 0.55, 1.05, glass, x0, 3.575, 0)); A(CTX.box(1.2, 0.10, 1.15, frame, x0, 3.85, 0)); panel(0.9, 0.45, x0, 3.575, 0.525);
   };
   tower(1); tower(-1);
-  A(CTX.box(2.6, 2.25, 1.5, glass, 0, 1.225, 0)); A(CTX.box(2.8, 0.12, 1.6, frame, 0, 2.35, 0)); panel(2.3, 2.0, 0, 1.20, 0.75);
-  A(CTX.box(3.0, 0.12, 0.7, frame, 0, 2.35, 0.9)); A(CTX.box(1.5, 2.05, 0.10, glassD, 0, 1.10, 0.76)); A(CTX.box(2.0, 0.14, 0.5, plazaM, 0, 0.10, 0.95));
+  // central atrium floats over an open civic lobby (walk in from the plaza)
+  A(CTX.box(2.6, 1.3, 1.5, glass, 0, 1.7, 0)); A(CTX.box(2.8, 0.12, 1.6, frame, 0, 2.35, 0)); panel(2.3, 1.1, 0, 1.70, 0.75);
+  A(CTX.box(2.6, 1.05, 0.14, glassD, 0, 0.575, -0.68));                     // lobby back wall
+  A(CTX.box(0.5, 1.05, 1.4, glassD, -1.05, 0.575, 0));                      // side stubs
+  A(CTX.box(0.5, 1.05, 1.4, glassD,  1.05, 0.575, 0));
+  const civGlow = CTX.toon('#eee6cd', { emissive:'#ddc98f', emissiveIntensity:0.35 });
+  A(CTX.box(2.2, 0.04, 1.3, plazaM, 0, 0.12, 0));                           // lobby floor
+  A(CTX.box(2.3, 0.9, 0.05, civGlow, 0, 0.6, -0.58));                       // lit information wall
+  A(CTX.box(0.9, 0.4, 0.3, frame, -0.5, 0.32, -0.15));                      // info desk
+  A(CTX.box(0.5, 1.0, 0.1, glassD, -0.78, 0.62, 0.74));                     // door-side glazing
+  A(CTX.box(0.5, 1.0, 0.1, glassD,  0.78, 0.62, 0.74));
+  A(CTX.box(3.0, 0.12, 0.7, frame, 0, 2.35, 0.9)); A(CTX.box(2.0, 0.14, 0.5, plazaM, 0, 0.10, 0.95));
   for (let s = -1; s <= 1; s += 2){ A(CTX.cyl(0.035, 0.035, 1.5, metal, s * 2.6, 0.85, 2.6, 8)); A(CTX.sph(0.06, metal, s * 2.6, 1.62, 2.6, 8)); }
   return g;
 }
@@ -829,6 +1050,10 @@ function buildFerrisWheel(CTX){
 
 export {
   buildTaipei101,
+  buildTaipeiDome,
+  buildGrandHyatt,
+  buildBreezeNanShan,
+  buildMitsukoshiA11,
   buildCKSComplex,
   buildGrandHotel,
   buildPalaceMuseum,
