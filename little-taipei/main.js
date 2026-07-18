@@ -1731,6 +1731,135 @@ function _pointAlong(frac){ let d=frac*gondola.len; for(let i=0;i<gondola.segLen
 function updateGondola(dt){ for(const c of gondola.cabins){ c.s=(c.s+dt*0.03)%1; const p=_pointAlong(c.s), up=p.clone().normalize();
   c.obj.position.copy(p).addScaledVector(up,-1.29); c.obj.quaternion.setFromUnitVectors(UPY, up); } }
 
+// --- Xiangshan (Elephant Mountain) trail: the street stairs SE of Xinyi Rd
+//     switchbacking up the city-facing face — hairpins on the flanks, the
+//     wooden photographers' deck at the middle bend, then the last flights to
+//     the summit platform with the classic Taipei 101 view. The climb is the
+//     analytic mountainside the player already walks on — treads, handrails
+//     and both platforms are dressing draped along CITY.trails data, so no
+//     new physics.
+let xiangshanDeckPos=null, xiangshanDeckSeen=false;
+let xiangshanSummitPos=null, xiangshanSummitSeen=false;
+function buildXiangshanTrail(){
+  const trailDefinition=(CITY.trails||[]).find(t=>t.id==='xiangshan-trail');
+  if(!trailDefinition) return;
+  const pts=warpPts(trailDefinition.path);
+  // even arc-length resample so the treads land at a steady stride — the tight
+  // stride lays ~600 small steps over the switchback climb, the real
+  // endless-staircase count
+  const stepKm=0.035/KM, samples=[];
+  for(let i=0;i<pts.length-1;i++){
+    const [ax,ay]=pts[i], [bx,by]=pts[i+1];
+    const len=Math.hypot(bx-ax,by-ay), n=Math.max(1,Math.round(len/stepKm));
+    for(let s=0;s<n;s++) samples.push({x:ax+(bx-ax)*s/n, y:ay+(by-ay)*s/n, tx:(bx-ax)/len, ty:(by-ay)/len});
+  }
+  // the flight pauses at the deck terrace and stops short of the summit platform
+  const end=pts[pts.length-1];
+  const deckPt=warpKm(...trailDefinition.deckAt);
+  const unitsTo=(s,px,py)=>Math.hypot(px-s.x,py-s.y)*KM;
+  // dirt shoulder under the flight + the short paved approach from Xinyi Rd
+  surfaceRibbon(pts, 0.26, null, 0.03, {mat:toon('#a1977f'), subdiv:6});
+  surfaceRibbon(warpPts([[1.97,-0.84], trailDefinition.path[0]]), 0.11, null, 0.045, {mat:toon('#cfc8b6'), subdiv:4});
+  const treadGeo=faceted(new THREE.BoxGeometry(1.35,0.3,0.3));
+  const treadMats=[toon('#b6b0a2'), toon('#a8a294')];
+  const railMat=toon('#2e6e52');                     // the trail's green metal rails
+  const stairsG=new THREE.Group();
+  let run=[[],[]]; const railRuns=[run];             // rails break at the deck gap
+  let treadCount=0;
+  for(let i=0;i<samples.length;i++){ const s=samples[i];
+    if(unitsTo(s,end[0],end[1])<1.35 || unitsTo(s,deckPt.x,deckPt.y)<1.35){
+      if(run[0].length){ run=[[],[]]; railRuns.push(run); }   // platform takes over
+      continue;
+    }
+    const d=mapDir(s.x,s.y);
+    const fwd=mapDir(s.x+s.tx*0.01,s.y+s.ty*0.01).sub(d);
+    const tread=new THREE.Mesh(treadGeo,treadMats[treadCount++%2]);
+    placeFacing(tread,d,fwd,-0.06);                  // 0.3-thick slab: top sits ~0.09 proud
+    stairsG.add(tread);
+    if(i%20===0){                                    // every ~0.7 units: claim + handrail posts
+      claim(d,1.15);                                 // keep blocks, props and forest off the flight
+      const up=d.clone(), f=fwd.clone().addScaledVector(up,-fwd.dot(up)).normalize();
+      const right=new THREE.Vector3().crossVectors(up,f).normalize();
+      for(const side of [0,1]){
+        const pd=up.clone().multiplyScalar(groundR(d)).addScaledVector(right, side?0.80:-0.80).normalize();
+        const base=pd.clone().multiplyScalar(groundR(pd)+0.02);
+        stairsG.add(cylBetween(base, base.clone().addScaledVector(pd,0.88), 0.035, railMat));
+        run[side].push(base.clone().addScaledVector(pd,0.86));
+      }
+    }
+  }
+  for(const rr of railRuns) for(const side of [0,1]) for(let i=0;i<rr[side].length-1;i++)
+    stairsG.add(cylBetween(rr[side][i], rr[side][i+1], 0.028, railMat));
+  planetGroup.add(bakeMerge(stairsG));
+  // world-space collider from a group-local circle (pier, boulders)
+  const worldCol=(anchor,grp,lx,lz,r,h)=>{ const off=new THREE.Vector3(lx,0,lz).applyQuaternion(grp.quaternion);
+    const cd=anchor.clone().multiplyScalar(groundR(anchor)).add(off).normalize();
+    colliders.push({dir:cd, ar:r/R, h}); };
+  // trailhead marker at the first step, front toward the street
+  const d0=mapDir(samples[0].x,samples[0].y);
+  const streetward=mapDir(samples[0].x-samples[0].tx*0.02, samples[0].y-samples[0].ty*0.02).sub(d0);
+  const trailheadObj=LM.buildXiangshanTrailhead(CTX);   // painted panel: keep unmerged (bakeMerge drops UVs)
+  placeFacing(trailheadObj,d0,streetward,0);
+  planetGroup.add(trailheadObj);
+  worldCol(d0,trailheadObj,-1.5,0,0.62,2.0);
+  claim(d0,2.2);
+  // stage 1 — the wooden photographers' deck on its mid-slope terrace, and
+  // stage 2 — the summit platform at the trail's end; both face the city pole,
+  // straight at 101, with their open back edge on the stair side
+  const dd=mapDir(deckPt.x,deckPt.y);
+  const deckObj=LM.buildXiangshanLookout(CTX);
+  placeFacing(deckObj,dd,CITY_UP,0);
+  planetGroup.add(deckObj);
+  claim(dd,2.8);
+  xiangshanDeckPos=dd.clone().multiplyScalar(groundR(dd));
+  const dl=mapDir(end[0],end[1]);
+  const summitObj=LM.buildXiangshanSummit(CTX);
+  placeFacing(summitObj,dl,CITY_UP,0);
+  planetGroup.add(summitObj);
+  addLandmarkLabel(summitObj,'象山 Xiangshan',4.6);   // high enough to clear the 101 sightline from the platform
+  claim(dl,2.6);
+  xiangshanSummitPos=dl.clone().multiplyScalar(groundR(dl));
+  // Forest the massif — the real trail climbs through dense green, and the
+  // deck photo has treetops in the foreground. Covers the whole Four Beasts
+  // group (Xiangshan plus the Thumb/Lion/Leopard/Tiger ridge running SE), so
+  // the extended range reads as one wooded mass. The claims above keep the
+  // flights, marker and terraces clear; tree claims also crowd procedural
+  // blocks off the lower slopes before buildCityBlocks runs.
+  const massifIds=['elephant-mountain','thumb-mountain','lion-leopard-ridge','tiger-mountain'];
+  const trunkGeo=faceted(new THREE.CylinderGeometry(0.05,0.08,0.5,5)); trunkGeo.translate(0,0.25,0);
+  const coneGeo=faceted(new THREE.ConeGeometry(0.32,0.95,6)); coneGeo.translate(0,0.55,0);
+  const trunkMat=toon('#6b4a33'), coneMats=['#4f8f48','#3c6e3a','#5fa84e','#458a3e'].map(c=>toon(c));
+  const forest=new THREE.Group();
+  // photo line from the deck toward 101 (map origin): a corridor kept clear of
+  // treetops so the deck terrace actually gets its skyline shot
+  const deckLen=Math.hypot(deckPt.x,deckPt.y), ox=-deckPt.x/deckLen, oy=-deckPt.y/deckLen;
+  for(const id of massifIds){
+    const mi=CITY.terrain.mountains.findIndex(m=>m.id===id);
+    if(mi<0) continue;
+    const M=MOUNTAINS[mi];
+    const attempts=Math.round(310*M.r*M.r);      // same planting density on every bump
+    for(let i=0;i<attempts;i++){
+      const a=rng()*Math.PI*2, rr=Math.sqrt(rng())*M.r*0.97;
+      const wx=M.x+Math.cos(a)*rr, wy=M.y+Math.sin(a)*rr;
+      const d=mapDir(wx,wy);
+      const h=terrain(d);
+      if(h<1.32 || h>12.2) continue;             // hillside band: above the streets, below the rocky caps
+      const vx=wx-deckPt.x, vy=wy-deckPt.y;
+      const along=vx*ox+vy*oy, across=Math.abs(vx*oy-vy*ox);
+      if(along>-0.05 && along<0.9 && across<0.16) continue;   // the deck's 101 photo line
+      if(!freeSpot(d,0.6)) continue;
+      claim(d,0.55);
+      const tree=new THREE.Group();
+      tree.add(new THREE.Mesh(trunkGeo,trunkMat));
+      tree.add(new THREE.Mesh(coneGeo,coneMats[i%coneMats.length]));
+      const s=rand(0.8,1.3);
+      placeOnSurface(tree,d,0,rand(0,6.28)); tree.scale.set(s,s*rand(0.9,1.4),s);
+      forest.add(tree);
+    }
+  }
+  planetGroup.add(bakeMerge(forest));
+}
+
 // LANDMARKS (with warp + de-clump) now resolves up top, before the planet mesh
 // samples terrain(), so every landmark's ground pad is baked into the world.
 function placeAllLandmarks(){
@@ -1768,6 +1897,7 @@ function buildTaipeiWorld(){
   buildRivers(); buildRoads(); buildMRT();
   placeAllLandmarks();
   placeShops();
+  buildXiangshanTrail();     // claims the stair corridor before blocks & forest scatter
   reserveYouBikeStations();
   buildCityBlocks();
   buildStreetLayer();
@@ -2771,6 +2901,19 @@ function animate(){
   // garbage-truck easter egg: wander close and it sings Für Elise
   if(garbageTruckPos && started){ gtCool-=dt;
     if(gtCool<=0 && player.position.distanceTo(garbageTruckPos)<6){ gtCool=45; sfxGarbage(); toast('🎵 the garbage truck!'); } }
+  // Xiangshan: celebrate each stage of the climb the first time you arrive.
+  // Near either platform the climb owns its moment — mute the generic 🌄 toast.
+  if(xiangshanDeckPos && started){
+    const dDeck=player.position.distanceTo(xiangshanDeckPos);
+    const dSummit=player.position.distanceTo(xiangshanSummitPos);
+    if(dDeck<7 || dSummit<7) vistaDone=true;
+    if(!xiangshanDeckSeen && dDeck<2.4){ xiangshanDeckSeen=true;
+      toast('📸 the Taipei 101 view!');
+      [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.18,'triangle',0.12),i*110)); }
+    if(!xiangshanSummitSeen && dSummit<2.6){ xiangshanSummitSeen=true;
+      toast('⛰️ 象山 summit — top of the climb!');
+      [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>blip(f,0.18,'triangle',0.12),i*110)); }
+  }
   for(let i=0;i<windMats.length;i++) windMats[i].uTime.value=performance.now()*0.001;
   for(let i=0;i<spinners.length;i++) spinners[i].m.rotateZ(spinners[i].s*dt);   // Ferris wheel etc.
   updateGondola(dt);                                                             // Maokong cable cars

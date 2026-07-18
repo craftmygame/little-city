@@ -47,6 +47,7 @@ export function validateCity(city, builders = {}) {
   checkPoints(city.districts || [], 'districts');
   checkPaths(city.roads || [], 'roads');
   checkPaths(city.transit?.metroLines || [], 'transit.metroLines');
+  checkPaths(city.trails || [], 'trails');
 
   for (const road of city.roads || []) {
     assert(Number.isFinite(road.widthKm) && road.widthKm > 0, `roads.${road.id}.widthKm must be positive`);

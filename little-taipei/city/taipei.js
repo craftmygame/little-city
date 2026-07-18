@@ -64,9 +64,19 @@ export const TAIPEI_CITY = {
       { id: 'erge', at: [6, -8.5], height: 6.0, radiusKm: 3.8 },
       { id: 'wenshan', at: [-0.5, -6.5], height: 5.5, radiusKm: 3.6 },
       { id: 'southwest-hills', at: [-3.5, -6], height: 4.5, radiusKm: 3.2 },
-      { id: 'elephant-mountain', at: [1.3, -1.6], height: 2.4, radiusKm: 1.0 },
+      // The hero climb: a steep giant (summit ~12.7, ≈45% of 101's roof, like
+      // the real 183 m vs 508 m). The ~600-step trail (trails below) switchbacks
+      // up its city-facing north face.
+      { id: 'elephant-mountain', at: [1.3, -1.6], height: 12.0, radiusKm: 1.0 },
+      // …and the massif keeps going south-east, as on the map: Thumb Lookout
+      // Mountain (拇指山, the real 320 m — taller than Xiangshan itself) behind
+      // it, with the Lion/Leopard heads and Tiger Mountain (虎山) closing the
+      // Four Beasts ridge toward Fude St. Scenery only — no trail climbs these.
+      { id: 'thumb-mountain', at: [1.95, -2.35], height: 14.0, radiusKm: 1.1 },
+      { id: 'lion-leopard-ridge', at: [2.45, -1.85], height: 9.0, radiusKm: 0.8 },
+      { id: 'tiger-mountain', at: [2.68, -1.38], height: 7.0, radiusKm: 0.65 },
 
-      // Four Beasts, Nangang, Neihu, and Guanyinshan
+      // Four Beasts foothills beyond, Nangang, Neihu, and Guanyinshan
       { id: 'four-beasts', at: [5, -2.5], height: 3.8, radiusKm: 2.8 },
       { id: 'nangang-hills', at: [7.5, -0.5], height: 3.4, radiusKm: 3.0 },
       { id: 'neihu-north', at: [3.5, 7.5], height: 3.2, radiusKm: 2.8 },
@@ -96,6 +106,15 @@ export const TAIPEI_CITY = {
     gradedSites: [
       { id: 'palace-museum-site', at: [-1.6, 7.6], innerKm: 0.72, outerKm: 1.18, height: 3.15 },
       { id: 'shilin-market-site', at: [-4.4, 6.35], innerKm: 0.52, outerKm: 0.92, height: 1.45 },
+      // Terraces on Elephant Mountain's climb (trails below). The deck and the
+      // low landing sit exactly on switchback hairpins — the flat disc turns
+      // the sharp bend into a rest platform; heights match the natural slope
+      // at each spot so they read as ledges, not carved pits. Keep the deck
+      // disc small: the next flight passes ~1u away and a wider blend would
+      // warp its stairs.
+      { id: 'xiangshan-landing-site', at: [1.166, -1.27], innerKm: 0.05, outerKm: 0.14, height: 5.5 },
+      { id: 'xiangshan-deck-site', at: [1.538, -1.538], innerKm: 0.14, outerKm: 0.20, height: 8.6 },
+      { id: 'xiangshan-summit-site', at: [1.31, -1.61], innerKm: 0.20, outerKm: 0.34, height: 12.7 },
     ],
 
     // NOTE — Xinyi district (the window between Guangfu S Rd, Songren Rd,
@@ -120,7 +139,13 @@ export const TAIPEI_CITY = {
       // City Hall front plaza lawn, west of Taipei City Hall on the Ren'ai axis.
       { id: 'xinyi-green', name: 'Citizen Plaza', at: [-0.35, 0.95], radiusKm: 0.3 },
       { id: 'peace-park', name: '228 Peace Memorial Park', at: [-5.5, 1.0], radiusKm: 0.5 },
-      { id: 'elephant-mountain-park', name: 'Elephant Mountain Trailhead', at: [1.2, -1.5], radiusKm: 0.7 },
+      // Covers the whole Xiangshan face (the real slopes are the 樹蛙保育區
+      // ecological zone): keeps procedural blocks off the mountain and lets the
+      // hillside-forest scatter reach the lower slopes around the trail.
+      { id: 'elephant-mountain-park', name: 'Elephant Mountain Trailhead', at: [1.25, -1.55], radiusKm: 1.25 },
+      // Greens the rest of the Four Beasts massif (Thumb Lookout / Lion /
+      // Leopard / Tiger) and keeps procedural blocks off its lower aprons.
+      { id: 'four-beasts-ridge-park', name: 'Four Beasts Ridge', at: [2.3, -1.95], radiusKm: 1.35 },
       { id: 'dadaocheng-riverside', name: 'Dadaocheng Riverside Park', at: [-7.6, 3.8], radiusKm: 0.85 },
       { id: 'wanhua-riverside', name: 'Wanhua Riverside Park', at: [-7.9, -0.6], radiusKm: 0.85 },
       { id: 'dajia-riverside', name: 'Dajia Riverside Park', at: [-2.6, 4.4], radiusKm: 0.9 },
@@ -130,7 +155,9 @@ export const TAIPEI_CITY = {
     ],
     ponds: [
       { id: 'daan-pond', at: [-2.9, -0.65], radius: 1.0 },
-      { id: 'elephant-mountain-pond', at: [1.2, -1.6], radius: 0.5 },
+      // At the mountain's north foot beside the trailhead approach — not on
+      // the summit slope, where a flat water disc reads as a floating saucer.
+      { id: 'elephant-mountain-pond', at: [1.62, -0.98], radius: 0.5 },
       { id: 'zhongshan-pond', at: [-1.0, 1.02], radius: 0.5 },   // 翠湖, SW corner of Zhongshan Park
     ],
   },
@@ -171,7 +198,9 @@ export const TAIPEI_CITY = {
     // Xinyi Rd Sec 5 — passes just south of the Taipei 101 block; the red MRT
     // line and the Taipei 101/World Trade Center station follow it.
     { id: 'xinyi-road', name: 'Xinyi Road', widthKm: 0.24, path: [[-6.6, -1.0], [-3.0, -1.0], [-1.6, -0.66], [-0.6, -0.62], [0.6, -0.62], [1.5, -0.7], [2.4, -1.0]] },
-    { id: 'heping', name: 'Heping Road', widthKm: 0.22, path: [[-6.8, -1.9], [-3.0, -2.0], [0.0, -2.05], [2.0, -2.1]] },
+    // Heping E Rd stops well west of the Four Beasts massif — its old stub to
+    // [2.0, -2.1] would now climb Thumb Lookout Mountain's slope.
+    { id: 'heping', name: 'Heping Road', widthKm: 0.22, path: [[-6.8, -1.9], [-3.0, -2.0], [0.0, -2.05], [0.75, -2.05]] },
     { id: 'nanjing', name: 'Nanjing Road', widthKm: 0.26, path: [[-6.2, 2.5], [-3.5, 2.6], [-1.0, 2.65], [1.6, 2.6], [3.2, 2.5]] },
     // Bade Rd — bows north around the Taipei Dome block (Civic Blvd corridor).
     { id: 'bade', name: 'Bade Road', widthKm: 0.22, path: [[-6.2, 1.7], [-3.0, 1.75], [-1.7, 2.5], [0.0, 2.5], [2.6, 2.3]] },
@@ -207,6 +236,31 @@ export const TAIPEI_CITY = {
     ],
     gondola: { from: [1.2, -4.2], to: [2.7, -7.8], pylons: 11, cabins: 5 },
   },
+
+  // Hiking trails the runtime drapes over the terrain as stone steps with
+  // handrails. First path point = street-level trailhead, last = the summit
+  // goal; `deckAt` names the mid-trail path point where the flight pauses at a
+  // rest platform. Points are real km, like roads; the player climbs by simply
+  // walking the mountainside underneath.
+  trails: [
+    // Xiangshan (Elephant Mountain) trail — from the lane SE of the Xinyi Rd
+    // end (by Xiangshan MRT, as on the real map), then ~600 stone steps like
+    // the real climb. As on the real mountain the stairs never circle the
+    // peak: they switchback up the city-facing north face (a constant-grade
+    // ladder bounced between two bearings, hairpins on the flanks), pausing
+    // at the wooden photographers' deck about two-thirds up (deckAt — the
+    // real deck is at ~120 m of 183 m), and topping out on the summit crown
+    // with the full Taipei 101 panorama behind you the whole way up.
+    { id: 'xiangshan-trail', name: 'Xiangshan Trail',
+      deckAt: [1.538, -1.538],
+      path: [[1.88, -1.02], [1.845, -1.056], [1.809, -1.094], [1.774, -1.13], [1.739, -1.166], [1.7, -1.2],
+             [1.651, -1.203], [1.601, -1.198], [1.551, -1.192], [1.501, -1.187], [1.449, -1.185], [1.397, -1.188],
+             [1.345, -1.195], [1.294, -1.207], [1.244, -1.225], [1.198, -1.249], [1.179, -1.268], [1.229, -1.266],
+             [1.278, -1.271], [1.329, -1.283], [1.378, -1.303], [1.42, -1.329], [1.46, -1.363], [1.491, -1.402],
+             [1.516, -1.446], [1.532, -1.496], [1.538, -1.538], [1.505, -1.488], [1.467, -1.452], [1.422, -1.425],
+             [1.372, -1.411], [1.322, -1.409], [1.271, -1.421], [1.241, -1.44], [1.291, -1.439], [1.342, -1.45],
+             [1.368, -1.484], [1.348, -1.53], [1.325, -1.577], [1.318, -1.593]] },
+  ],
 
   landmarks: [
     { id: 'taipei-101', name: 'Taipei 101', builder: 'buildTaipei101', at: [0.0, 0.0], placement: { scale: 1.15, foot: 7.2, cols: [
@@ -269,7 +323,8 @@ export const TAIPEI_CITY = {
   ],
 
   shops: [
-    { id: 'seven-eleven-xinyi', builder: 'buildSevenEleven', at: [0.8, -0.9], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: -25 } },
+    // North of Xinyi Rd — off the Xiangshan-lookout → 101 sightline.
+    { id: 'seven-eleven-xinyi', builder: 'buildSevenEleven', at: [0.35, -0.8], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: -25 } },
     { id: 'seven-eleven-nangang', builder: 'buildSevenEleven', at: [3.4, 0.2], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: 200 } },
     { id: 'seven-eleven-zhongshan', builder: 'buildSevenEleven', at: [-3.3, 1.2], placement: { ...SEVEN_ELEVEN_PLACEMENT, face: 40 } },
     { id: 'familymart-songshan', builder: 'buildFamilyMart', at: [-1.2, 1.7], placement: { ...FAMILY_MART_PLACEMENT, face: 15 } },

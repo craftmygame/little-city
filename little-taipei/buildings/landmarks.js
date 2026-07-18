@@ -1047,6 +1047,123 @@ function buildFerrisWheel(CTX){
   return g;
 }
 
+// ---------------------------------------------------------------------
+//  XIANGSHAN TRAILHEAD — the stone 象山步道 marker where the street stairs
+//  enter the forest: masonry pier with the painted trail panel, a wooden
+//  fingerpost, a flower strip and the black-bear greeter cutout.
+//  (+Z faces the street; the host runs the stair treads through the middle.)
+// ---------------------------------------------------------------------
+function xiangshanPanelTexture(T){
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 176;
+  const cx = cv.getContext('2d');
+  cx.fillStyle = '#edeee2'; cx.fillRect(0, 0, 128, 176);                      // aged plaster
+  cx.strokeStyle = '#c9c5b2'; cx.lineWidth = 6; cx.strokeRect(3, 3, 122, 170); // worn border
+  // 象山步道 stacked down the right, like the real marker
+  cx.fillStyle = '#1f5c46'; cx.font = '700 34px "PingFang TC", "Noto Sans TC", system-ui, sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  ['象', '山', '步', '道'].forEach((ch, i) => cx.fillText(ch, 98, 30 + i * 40));
+  // Taipei 101 sketch over a green ridge line
+  cx.strokeStyle = '#7c8794'; cx.lineWidth = 4; cx.lineCap = 'round';
+  cx.beginPath(); cx.moveTo(34, 96); cx.lineTo(34, 34); cx.moveTo(46, 96); cx.lineTo(46, 34);
+  cx.moveTo(40, 34); cx.lineTo(40, 18); cx.stroke();
+  cx.lineWidth = 2.5;
+  for (let y = 46; y <= 88; y += 14){ cx.beginPath(); cx.moveTo(31, y); cx.lineTo(49, y); cx.stroke(); }
+  cx.strokeStyle = '#3f7d5c'; cx.lineWidth = 5;
+  cx.beginPath(); cx.moveTo(8, 108); cx.quadraticCurveTo(34, 88, 56, 104); cx.quadraticCurveTo(72, 114, 84, 106); cx.stroke();
+  // little grey elephant under the ridge
+  cx.fillStyle = '#6a7178';
+  cx.beginPath(); cx.ellipse(42, 142, 20, 13, 0, 0, Math.PI * 2); cx.fill();  // body
+  cx.beginPath(); cx.arc(64, 136, 9, 0, Math.PI * 2); cx.fill();              // head
+  cx.strokeStyle = '#6a7178'; cx.lineWidth = 4;
+  cx.beginPath(); cx.moveTo(71, 138); cx.quadraticCurveTo(78, 146, 74, 154); cx.stroke(); // trunk
+  cx.fillRect(30, 150, 6, 10); cx.fillRect(48, 150, 6, 10);                   // legs
+  const tex = new T.CanvasTexture(cv); tex.colorSpace = T.SRGBColorSpace;
+  tex.minFilter = T.LinearFilter; return tex;
+}
+function buildXiangshanTrailhead(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m); const T = CTX.THREE;
+  const stone = CTX.toon('#9a958a'), stoneD = CTX.toon('#87837a'), cap = CTX.toon('#b0aa9c');
+  const wood = CTX.toon('#7c5a3e'), woodD = CTX.toon('#5f4630'), soil = CTX.toon('#5a4636');
+  // masonry pier left of the steps (as in the photo), coursed blocks + cap
+  const px = -1.5;
+  A(CTX.box(1.3, 0.18, 0.85, stoneD, px, 0.09, 0));
+  for (let r = 0; r < 4; r++){
+    const w = 1.16 - r * 0.03;
+    A(CTX.box(w, 0.30, 0.66, r % 2 ? stoneD : stone, px + (r % 2 ? 0.02 : -0.02), 0.33 + r * 0.30, 0));
+  }
+  A(CTX.box(1.24, 0.12, 0.74, cap, px, 1.59, 0));
+  // painted 象山步道 panel set into the street face
+  const panel = new T.Mesh(new T.PlaneGeometry(0.78, 1.06),
+    new T.MeshBasicMaterial({ map: xiangshanPanelTexture(T) }));
+  panel.position.set(px, 0.92, 0.345); A(panel);
+  // wooden fingerpost right of the steps, boards pointing up the trail
+  A(CTX.cyl(0.05, 0.06, 1.9, woodD, 1.3, 0.95, 0, 8));
+  const b1 = CTX.box(0.86, 0.2, 0.06, wood, 1.52, 1.66, 0); b1.rotation.y = -0.4; b1.rotation.z = 0.1; A(b1);
+  const b2 = CTX.box(0.7, 0.18, 0.06, wood, 1.5, 1.36, 0.03); b2.rotation.y = -0.32; A(b2);
+  // flower strip along the street edge
+  A(CTX.box(1.1, 0.14, 0.34, soil, 1.65, 0.07, 0.62));
+  const petals = ['#e0607a', '#f2cc8f', '#c98bb9', '#e07a5f'];
+  for (let i = 0; i < 6; i++){
+    const fx = 1.2 + i * 0.18;
+    A(CTX.cyl(0.015, 0.02, 0.16, CTX.toon('#4f8f48'), fx, 0.2, 0.62, 5));
+    A(CTX.sph(0.055, CTX.toon(petals[i % petals.length]), fx, 0.3, 0.62, 7));
+  }
+  return g;
+}
+
+// ---------------------------------------------------------------------
+//  XIANGSHAN LOOKOUT — the wooden viewing deck at the top of the trail
+//  (+Z faces Taipei 101) with the giant granite boulders beside it.
+//  Deck floor stays thin and near y = 0: the player walks on the terrain.
+// ---------------------------------------------------------------------
+function buildXiangshanLookout(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const wood = CTX.toon('#8a6243'), woodL = CTX.toon('#9c7350'), woodD = CTX.toon('#5f4630');
+  // low plank deck (7 boards over a frame slab)
+  A(CTX.box(2.7, 0.06, 2.1, woodD, 0, 0.03, 0));
+  for (let i = 0; i < 7; i++) A(CTX.box(0.35, 0.045, 2.02, i % 2 ? wood : woodL, -1.17 + i * 0.39, 0.082, 0));
+  // railing on the view side + flanks; open at the back where the stairs arrive
+  const postAt = [[-1.28, 0.98], [0, 0.98], [1.28, 0.98], [-1.28, 0.1], [1.28, 0.1], [-1.28, -0.78], [1.28, -0.78]];
+  for (const [x, z] of postAt) A(CTX.box(0.09, 0.92, 0.09, woodD, x, 0.5, z));
+  A(CTX.box(2.68, 0.08, 0.1, wood, 0, 0.94, 0.98));                           // front top rail
+  A(CTX.box(2.68, 0.05, 0.07, wood, 0, 0.56, 0.98));                          // front mid rail
+  for (const sx of [-1.28, 1.28]){
+    const top = CTX.box(0.1, 0.08, 1.85, wood, sx, 0.94, 0.1); A(top);
+    const mid = CTX.box(0.07, 0.05, 1.85, wood, sx, 0.56, 0.1); A(mid);
+  }
+  // coin-scope on the view rail — everyone lines up the same photo
+  A(CTX.cyl(0.035, 0.05, 0.85, CTX.toon('#3a3f47'), 0.75, 0.42, 0.78, 8));
+  const scope = CTX.box(0.3, 0.14, 0.2, CTX.toon('#c9cdd1'), 0.75, 0.92, 0.78); scope.rotation.x = -0.25; A(scope);
+  return g;
+}
+
+// Stage two of the climb — the open summit platform above the wooden deck.
+// Concrete pad with the trail's green metal railing, a survey pillar and the
+// 象山 stele at the back corners; nothing on the view side blocks the panorama.
+function buildXiangshanSummit(CTX){
+  const g = CTX.group(); const A = m => (g.add(m), m);
+  const slab = CTX.toon('#a9a99c'), curb = CTX.toon('#94948a'), rail = CTX.toon('#2e6e52');
+  A(CTX.box(2.6, 0.1, 2.0, slab, 0, 0.05, 0));
+  // stone skirt sunk into the crest so the pad reads grounded, not floating
+  A(CTX.box(2.76, 0.5, 2.16, curb, 0, -0.2, 0));
+  // railing on the view side + flanks; open at the back where the stairs arrive
+  const postAt = [[-1.24, 0.94], [-0.62, 0.94], [0, 0.94], [0.62, 0.94], [1.24, 0.94], [-1.24, 0.1], [1.24, 0.1], [-1.24, -0.74], [1.24, -0.74]];
+  for (const [x, z] of postAt) A(CTX.cyl(0.035, 0.035, 0.82, rail, x, 0.41, z, 6));
+  A(CTX.box(2.54, 0.06, 0.06, rail, 0, 0.84, 0.94));
+  A(CTX.box(2.54, 0.045, 0.045, rail, 0, 0.5, 0.94));
+  for (const sx of [-1.24, 1.24]){
+    A(CTX.box(0.06, 0.06, 1.74, rail, sx, 0.84, 0.1));
+    A(CTX.box(0.045, 0.045, 1.74, rail, sx, 0.5, 0.1));
+  }
+  // summit survey pillar + the 象山 stele, tucked at the back corners
+  A(CTX.box(0.2, 0.5, 0.2, CTX.toon('#e8e6dd'), -1.02, 0.3, -0.72));
+  const stele = CTX.box(0.42, 0.95, 0.16, CTX.toon('#6f6d63'), 1.0, 0.52, -0.7); stele.rotation.y = -0.35; A(stele);
+  // wooden bench for the sunrise crowd, against the back edge
+  A(CTX.box(0.9, 0.06, 0.3, CTX.toon('#8a6243'), -0.1, 0.42, -0.8));
+  for (const bx of [-0.48, 0.28]) A(CTX.box(0.08, 0.36, 0.26, CTX.toon('#5f4630'), bx, 0.23, -0.8));
+  return g;
+}
+
 export {
   buildTaipei101,
   buildTaipeiDome,
@@ -1064,4 +1181,7 @@ export {
   buildCityHall,
   buildArena,
   buildFerrisWheel,
+  buildXiangshanTrailhead,
+  buildXiangshanLookout,
+  buildXiangshanSummit,
 };
