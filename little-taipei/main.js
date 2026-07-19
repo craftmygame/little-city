@@ -1941,7 +1941,68 @@ function buildXiangshanTrail(){
 // LANDMARKS (with warp + de-clump) now resolves up top, before the planet mesh
 // samples terrain(), so every landmark's ground pad is baked into the world.
 function placeAllLandmarks(){
-  for(const [builder,x,y,opts] of LANDMARKS) placeLandmark(builder, x, y, opts);
+  for(const [builder,x,y,opts] of LANDMARKS){
+    const placed = placeLandmark(builder, x, y, opts);
+    if(opts.pin) buildObservatory(placed, opts.scale||1);   // Taipei 101 carries the pin
+  }
+}
+
+// --- Taipei 101 observatory: the one hero vertical. Elevator door in the
+//     atrium → fade → teleport to a walkable deck high on the tower (its own
+//     ground override + an invisible glass ring) → elevator back down.
+//     One-off machinery by design — nothing here generalizes.
+const OBS={ ready:false, mode:false, dir:null, floorR:0, maxAng:0, upPos:null, downPos:null };
+function buildObservatory(anchor, sc){
+  const dir=anchor.dir.clone();
+  // deck floor caps the crown (local y≈25.9 × scale) — only the slim spire
+  // passes through it, like the real 91F outdoor deck
+  const deckR = groundR(dir) + 25.9*sc + 0.10;
+  const deck=new THREE.Group();
+  const silver=toon('#9AA3A8'), glassM=toon('#7FB0AC',{emissive:'#3E5E60',emissiveIntensity:0.15});
+  const goldM=toon('#D0A23C',{emissive:'#7A5E1F',emissiveIntensity:0.3});
+  const SQ=Math.PI/4, DR=2.05;
+  const floor=new THREE.Mesh(faceted(new THREE.CylinderGeometry(DR,DR,0.16,4)),silver);
+  floor.rotation.y=SQ; deck.add(floor);
+  // glass parapet — 4 panels + corner posts on the square deck's edges
+  for(let k=0;k<4;k++){
+    const a=k*Math.PI/2;
+    const p=new THREE.Mesh(faceted(new THREE.BoxGeometry(2.6,0.85,0.06)),glassM);
+    p.position.set(Math.sin(a)*1.42,0.5,Math.cos(a)*1.42); p.rotation.y=a; deck.add(p);
+    const post=new THREE.Mesh(faceted(new THREE.BoxGeometry(0.1,0.95,0.1)),silver);
+    const b=a+Math.PI/4; post.position.set(Math.sin(b)*1.95,0.55,Math.cos(b)*1.95); deck.add(post);
+  }
+  // the famous tuned-mass damper, cradled mid-deck
+  const damper=new THREE.Mesh(faceted(new THREE.SphereGeometry(0.48,14,10)),goldM);
+  damper.position.set(1.0,0.92,0.55); deck.add(damper);
+  const cradle=new THREE.Mesh(faceted(new THREE.CylinderGeometry(0.3,0.42,0.5,8)),silver);
+  cradle.position.set(1.0,0.32,0.55); deck.add(cradle);
+  // elevator hut + door back down
+  const hut=new THREE.Mesh(faceted(new THREE.BoxGeometry(1.15,1.75,0.7)),silver);
+  hut.position.set(0,0.95,-1.55); deck.add(hut);
+  const dDoor=new THREE.Mesh(faceted(new THREE.BoxGeometry(0.8,1.45,0.08)),goldM);
+  dDoor.position.set(0,0.82,-1.16); deck.add(dDoor);
+  deck.quaternion.copy(anchor.obj.quaternion);
+  deck.position.copy(dir).multiplyScalar(deckR);
+  planetGroup.add(deck);
+  OBS.ready=true; OBS.dir=dir; OBS.floorR=deckR+0.08; OBS.maxAng=(DR-0.32)/R;
+  OBS.upPos=anchor.obj.localToWorld(new THREE.Vector3(0,1.0*sc,-0.9*sc));   // atrium door (bakeMerge folds scale)
+  OBS.downPos=deck.localToWorld(new THREE.Vector3(0,0.9,-1.1));
+}
+let obsNear=null;   // 'up' | 'down' while the prompt shows
+const fadeEl=(()=>{ const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;background:#0b0e10;opacity:0;transition:opacity .35s;pointer-events:none;z-index:40';
+  document.body.appendChild(d); return d; })();
+function rideObservatory(up){
+  fadeEl.style.opacity='1';
+  setTimeout(()=>{
+    if(up){ OBS.mode=true;
+      const east=new THREE.Vector3().crossVectors(OBS.dir,CITY_NORTH).normalize();
+      surfDir.copy(OBS.dir).applyAxisAngle(east, 0.9/R).normalize();   // arrive beside, not inside, the spire
+      alt=0; vVel=0; }
+    else { OBS.mode=false; surfDir.copy(OBS.upPos).normalize(); alt=0; vVel=0; }
+    heading.copy(CITY_NORTH).addScaledVector(surfDir,-CITY_NORTH.dot(surfDir)).normalize();
+    setTimeout(()=>{ fadeEl.style.opacity='0'; }, 120);
+  }, 380);
 }
 
 // --- the little shops that make Taipei feel lived-in: a convenience store on
@@ -2148,10 +2209,19 @@ function updatePlayer(dt){
     _playerMoveRight.crossVectors(up,heading).normalize();
     const ang = (sp*dt)/R;
     surfDir.applyAxisAngle(_playerMoveRight, ang).normalize();
-    if(isWater(surfDir)) surfDir.copy(_playerMovePrev);     // can't walk onto water — stop at the shoreline
+    if(!OBS.mode && isWater(surfDir)) surfDir.copy(_playerMovePrev);   // can't walk onto water — stop at the shoreline
     heading.addScaledVector(surfDir, -heading.dot(surfDir)).normalize();
   }
-  resolveCollisions();                 // slide around solid props & NPCs
+  if(OBS.mode){
+    // observatory deck: glass ring — clamp inside the parapet instead of
+    // resolving ground colliders (those belong to the street 28 units below)
+    const ang=surfDir.angleTo(OBS.dir);
+    if(ang>OBS.maxAng){
+      const axis=new THREE.Vector3().crossVectors(surfDir,OBS.dir);
+      if(axis.lengthSq()>1e-10){ axis.normalize(); surfDir.applyAxisAngle(axis, ang-OBS.maxAng).normalize(); }
+      heading.addScaledVector(surfDir,-heading.dot(surfDir)).normalize();
+    }
+  } else resolveCollisions();          // slide around solid props & NPCs
   const travelDistance=Math.abs(sp)>0.01?_playerPrevDir.angleTo(surfDir)*R:0;
   const actualSpeed=Math.min(MOVE*1.25,travelDistance/Math.max(dt,1e-4));
   curSpeed=motionDamp(curSpeed,actualSpeed,8,dt);
@@ -2161,7 +2231,7 @@ function updatePlayer(dt){
   const wasGrounded=grounded;
   vVel -= GRAV*dt; alt += vVel*dt;
   if(alt<=0){ if(!wasGrounded){ doSquash(1.06,0.94); puff(player.position); sfxLand(); } alt=0; vVel=0; grounded=true; } else grounded=false;
-  const gR = groundR(surfDir);
+  const gR = OBS.mode ? OBS.floorR : groundR(surfDir);
   player.position.copy(surfDir).multiplyScalar(gR+alt+FEET);
   // blob shadow stays glued to the street
   playerShadow.position.copy(surfDir).multiplyScalar(gR);
@@ -2281,6 +2351,16 @@ function deliver(){
 // interaction check
 let nearTarget=null, _wasNear=false;
 function checkInteract(){
+  // the observatory elevator outranks quest prompts while you stand at a door
+  obsNear=null;
+  if(OBS.ready){
+    if(!OBS.mode && player.position.distanceTo(OBS.upPos)<2.3){
+      obsNear='up'; nearTarget=null; showPrompt('ride up — observatory'); _wasNear=false; return;
+    }
+    if(OBS.mode && player.position.distanceTo(OBS.downPos)<1.7){
+      obsNear='down'; nearTarget=null; showPrompt('ride back down'); _wasNear=false; return;
+    }
+  }
   const target = carrying ? recipient : sender;
   nearTarget=null;
   if(!target) { hidePrompt(); _wasNear=false; return; }
@@ -2292,6 +2372,7 @@ function checkInteract(){
   _wasNear=near;
 }
 function doInteract(){
+  if(obsNear){ rideObservatory(obsNear==='up'); obsNear=null; hidePrompt(); return; }
   if(!nearTarget) return;
   if(carrying && nearTarget===recipient) deliver();
   else if(!carrying && nearTarget===sender) pickUp();

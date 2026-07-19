@@ -19,8 +19,8 @@ function buildTaipei101(CTX){
   const SQ = Math.PI / 4;                 // spin 4-gons so flat faces front
   const R  = (w) => w / Math.SQRT2;       // square face-width -> circumradius
 
-  const stone     = CTX.toon('#5C656A');
-  const stoneDark = CTX.toon('#454D52');
+  const stone     = CTX.toon('#B7B0A0');   // warm cream base like the real mall podium
+  const stoneDark = CTX.toon('#6F6A5E');
   const glassA    = CTX.toon('#4C8C8A');
   const glassB    = CTX.toon('#6FA8A2');
   const podGlass  = CTX.toon('#3E5E60');
@@ -46,7 +46,20 @@ function buildTaipei101(CTX){
   g.add(CTX.box(3.58,0.22,0.22,silver,0,3.18,3.44));
   g.add(CTX.box(8.25,3.35,0.05,lobbyGlow,0,1.80,-3.28));                 // warm rear lobby
   g.add(CTX.box(2.25,2.80,1.35,stoneDark,0,1.44,-2.10));                 // lift/core volume
+  // observatory elevator door on the core's face (the runtime teleports here)
+  g.add(CTX.box(1.14,2.0,0.07,gold,0,1.06,-1.40));
+  g.add(CTX.box(0.86,1.74,0.06,litWin,0,1.00,-1.35));
   g.add(CTX.box(1.60,0.88,0.46,gold,1.35,0.47,-0.72));                   // reception beside, not across, the route
+  // grand-atrium dressing: mezzanine ledges + balustrades, one escalator,
+  // kiosk row, glowing skylight under the roof plate
+  g.add(CTX.box(0.85,0.10,6.40,stone,-3.90,2.62,0));
+  g.add(CTX.box(0.85,0.10,6.40,stone, 3.90,2.62,0));
+  g.add(CTX.box(8.30,0.10,0.85,stone,0,2.62,-2.95));
+  g.add(CTX.box(0.05,0.34,6.40,silver,-3.50,2.84,0));
+  g.add(CTX.box(0.05,0.34,6.40,silver, 3.50,2.84,0));
+  const esc=CTX.box(0.78,0.07,3.60,silver,-2.55,1.38,-0.80); esc.rotation.x=0.60; g.add(esc);
+  for(const z of [-1.3,0.1,1.5]) g.add(CTX.box(0.66,1.05,0.66,podGlass,3.55,0.56,z));
+  g.add(CTX.box(4.60,0.06,3.40,litWin,0,4.02,0.4));
   for(const x of [-3.10,-2.25,2.25,3.10]){
     g.add(CTX.box(0.72,3.45,0.05,podGlass,x,1.78,3.55));
     g.add(CTX.box(0.035,3.45,0.07,silver,x-0.36,1.78,3.58));
@@ -56,21 +69,33 @@ function buildTaipei101(CTX){
   for(const x of [-3.6,-2.7,-1.8,-.9,0,.9,1.8,2.7,3.6])
     g.add(CTX.box(0.035,3.35,0.06,silver,x,1.78,3.60));                  // real façade's fine vertical grid
 
-  // tower: 8 flaring "bamboo node" frustums — tall & slender, the planet's anchor
-  const segH = 2.55, rBot = R(4.25), rTop = R(5.35), yBase = 4.12;
+  // tower: 8 flaring "bamboo node" frustums, each tier shrinking 3.5% so the
+  // shaft genuinely tapers base -> crown like the real tower
+  const segH = 2.55, rBot = R(4.25), rTop = R(5.35), yBase = 4.12, SHRINK = 0.965;
   for (let i = 0; i < 8; i++){
+    const f = Math.pow(SHRINK, i);
     const y0 = yBase + i * segH;
-    const seg = CTX.cyl(rTop, rBot, segH, (i % 2 ? glassB : glassA), 0, y0 + segH / 2, 0, 4);
+    const seg = CTX.cyl(rTop*f, rBot*f, segH, (i % 2 ? glassB : glassA), 0, y0 + segH / 2, 0, 4);
     seg.rotation.y = SQ; g.add(seg);
-    const band = CTX.cyl(R(4.55), R(4.55), 0.20, gold, 0, y0 + 0.12, 0, 4);
+    const band = CTX.cyl(R(4.55)*f, R(4.55)*f, 0.20, gold, 0, y0 + 0.12, 0, 4);
     band.rotation.y = SQ; g.add(band);
+    // ruyi ornaments: one gold bracket centred on each face at the tier joint
+    const cr = 4.55*f*0.5 + 0.10;
+    for(const [ox,oz,ry] of [[0,cr,0],[0,-cr,0],[cr,0,Math.PI/2],[-cr,0,Math.PI/2]]){
+      const orn = CTX.box(0.44,0.5,0.12,gold,ox,y0+0.42,oz);
+      orn.rotation.y = ry; g.add(orn);
+    }
   }
-  const yTop = yBase + 8 * segH;
+  const fTop = Math.pow(SHRINK, 7), yTop = yBase + 8 * segH;
 
   [2, 4, 6].forEach((i, k) => {
+    const f = Math.pow(SHRINK, i);
     const y0 = yBase + i * segH;
-    g.add(CTX.box(0.8,0.38,0.05,litWin,(k-1)*0.9,y0+0.9,2.47));
+    g.add(CTX.box(0.8,0.38,0.05,litWin,(k-1)*0.9,y0+0.9,2.47*f));
   });
+  // observatory band near the crown (the 89F deck the elevator serves)
+  const obs = CTX.cyl(R(3.35)*fTop, R(3.35)*fTop, 0.85, podGlass, 0, yTop-0.65, 0, 4);
+  obs.rotation.y = SQ; g.add(obs);
 
   // 4 ancient-coin medallions
   const cy = yBase+0.82, cd = 2.47;
@@ -86,12 +111,15 @@ function buildTaipei101(CTX){
     g.add(CTX.box(0.12, 0.12, 0.12, holeMat, c.h[0], c.h[1], c.h[2]));
   });
 
-  // crown + pinnacle + beacon
-  const crown = CTX.cyl(R(1.8),R(3.4),1.05,glassB,0,yTop+0.52,0,4);
+  // crown + pinnacle + beacon (scaled to the tapered top tier)
+  const crown = CTX.cyl(R(1.8)*fTop,R(3.4)*fTop,1.05,glassB,0,yTop+0.52,0,4);
   crown.rotation.y = SQ; g.add(crown);
   g.add(CTX.cyl(0.46,0.58,0.26,stoneDark,0,yTop+1.15,0,8));
   g.add(CTX.cyl(0.07,0.20,2.80,mastMat,0,yTop+2.62,0,8));
   g.add(CTX.sph(0.16,beaconMat,0,yTop+4.10,0,10));
+  // shallow glass pyramid over the podium mall (the real angular canopy)
+  const mallRoof = CTX.cone(R(6.2), 1.0, podGlass, 0, 4.12+0.56, 0, 4);
+  mallRoof.rotation.y = SQ; g.add(mallRoof);
   return g;
 }
 
