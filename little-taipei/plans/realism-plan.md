@@ -121,6 +121,26 @@ Run at every phase end (and after any layout change big enough to doubt):
 - Red MRT line now terminates at the real Xiangshan station instead of
   running into the mountain foot.
 
+### Phase 3 decisions
+
+- **Antipode closure (decided)**: keep the eased-spread rim model. The named
+  outer ranges land on the 110–120-unit rim ring (spreadDist caps at
+  17.9 km), the procedural rim fill closes tangential gaps between them, and
+  the polar ocean (119–125 u, with the NW bay where the Tamsui exits) caps
+  the far side. Verified in-game that no bearing-normalized range drowns.
+- **Bridges are visual decks**: arched (rise 1.5 u) so a wading player passes
+  under mid-span; the riverbed below stays walkable as before, so gameplay
+  is unchanged while crossings read from above. Piers + railings included.
+  A road that continues across a river (e.g. Minquan) still dips through the
+  carve under the deck — cosmetic, revisit if it bothers anyone.
+- **River widths** halved-ish (Tamsui halfWidth 0.62→0.30 km, others →0.22):
+  the corrected centrelines hug the real banks, and the old exaggerated
+  carve halo flooded Datong once the river moved to its true position.
+- **wenlin** (文林路) came back from OSM as a 0.2 km stub — skipped; Shilin
+  keeps zhongshan/chengde/shipai. Left in geo-truth for a later fix.
+- Runway block-void enforced in buildCityBlocks (0.36 km clear of the strip);
+  terminal is a normal landmark (`songshan-terminal`, terrainPin).
+
 ## Phases
 
 1. Tooling — geo-truth fetch, drift report, SVG preview.

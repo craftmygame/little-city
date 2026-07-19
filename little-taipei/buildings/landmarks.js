@@ -1164,7 +1164,28 @@ function buildXiangshanSummit(CTX){
   return g;
 }
 
+// --- Songshan Airport terminal: long low hall + control tower. The runway
+//     strip itself is city data (airfield) rendered by the runtime; this is
+//     just the building beside it. Authored flat, entrance +Z (south, street).
+function buildAirportTerminal(CTX){
+  const glass=CTX.toon('#7fa6b5'), wall=CTX.toon('#d9d4c6'), roof=CTX.toon('#8f9498');
+  const dark=CTX.toon('#4a5054'), trim=CTX.toon('#c3c7cb');
+  const g=CTX.group(
+    CTX.box(5.6,0.12,2.4,wall,0,0.06,0),               // apron slab
+    CTX.box(4.8,1.1,1.7,glass,0,0.65,0),               // glazed hall
+    CTX.box(5.0,0.18,1.9,roof,0,1.28,0),               // flat roof plate
+    CTX.box(4.8,0.16,0.3,trim,0,0.55,0.88),            // fascia over doors
+    CTX.cyl(0.22,0.26,2.6,wall,1.95,1.3,-0.55,10),     // control tower shaft
+    CTX.box(0.85,0.5,0.85,dark,1.95,2.85,-0.55),       // tower cab
+    CTX.box(0.95,0.08,0.95,trim,1.95,3.14,-0.55),      // cab roof
+  );
+  // radar dish
+  const dish=CTX.cyl(0.3,0.05,0.12,trim,1.95,3.28,-0.55,8); g.add(dish);
+  return g;
+}
+
 export {
+  buildAirportTerminal,
   buildTaipei101,
   buildTaipeiDome,
   buildGrandHyatt,

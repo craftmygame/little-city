@@ -71,6 +71,8 @@ if (!existsSync(TRUTH_PATH)) {
   const lineSources = [
     ...TAIPEI_CITY.roads.map(r => ({ id: r.id, path: r.path, what: 'road' })),
     ...TAIPEI_CITY.terrain.waterways.map(w => ({ id: w.id, path: w.path, what: 'river' })),
+    ...(TAIPEI_CITY.bridges || []).map(b => ({ id: b.id, path: b.path, what: 'bridge' })),
+    ...(TAIPEI_CITY.airfield ? [{ id: TAIPEI_CITY.airfield.runway.id, path: TAIPEI_CITY.airfield.runway.path, what: 'runway' }] : []),
   ];
   for (const s of lineSources) {
     const t = truth.get(s.id);

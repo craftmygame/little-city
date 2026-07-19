@@ -49,6 +49,15 @@ export function validateCity(city, builders = {}) {
   checkPaths(city.transit?.metroLines || [], 'transit.metroLines');
   checkPaths(city.trails || [], 'trails');
 
+  checkPaths(city.bridges || [], 'bridges');
+  for (const b of city.bridges || []) {
+    assert(Number.isFinite(b.widthKm) && b.widthKm > 0, `bridges.${b.id}.widthKm must be positive`);
+  }
+  if (city.airfield) {
+    assert(Array.isArray(city.airfield.runway?.path) && city.airfield.runway.path.every(isFinitePoint),
+      'airfield.runway.path must be a list of [eastKm, northKm] points');
+  }
+
   for (const road of city.roads || []) {
     assert(Number.isFinite(road.widthKm) && road.widthKm > 0, `roads.${road.id}.widthKm must be positive`);
   }

@@ -139,13 +139,14 @@ export const TAIPEI_CITY = {
     // carry in its data now lives in planet.spread.boost above.
 
     // River centrelines from geo-truth (OSM waterway ways, clipped to the
-    // basin). The Tamsui hugs x≈-6 through Datong (the old hand path ran
+    // basin, widths near real: Tamsui ~0.6 km, the others ~0.45 km wide
+    // rendered). The Tamsui hugs x≈-6 through Datong (the old hand path ran
     // ~1.7 km too far west) and the Keelung enters from the EAST at y≈+2 —
     // its old start south of Nangang was a genuine topology error.
     waterways: [
-      { id: 'tamsui-river', name: 'Tamsui River', halfWidthKm: 0.62, path: [[-7.656, 1.176], [-5.991, 2.588], [-5.756, 4.003], [-6.081, 5.408], [-7.734, 7.042], [-10.363, 8.022], [-10.8, 10.0]] },
-      { id: 'xindian-river', name: 'Xindian River', halfWidthKm: 0.42, path: [[-3.3, -9.8], [-4.434, -5.81], [-3.114, -3.272], [-5.051, -1.345], [-7.35, -2.507], [-7.656, 1.176]] },
-      { id: 'keelung-river', name: 'Keelung River', halfWidthKm: 0.45, path: [[7.8, 3.69], [0.978, 1.997], [0.524, 4.645], [-3.85, 4.322], [-7.2, 8.855], [-9.6, 8.93]] },
+      { id: 'tamsui-river', name: 'Tamsui River', halfWidthKm: 0.30, path: [[-7.656, 1.176], [-5.991, 2.588], [-5.756, 4.003], [-6.081, 5.408], [-7.734, 7.042], [-10.363, 8.022], [-10.8, 10.0]] },
+      { id: 'xindian-river', name: 'Xindian River', halfWidthKm: 0.22, path: [[-3.3, -9.8], [-4.434, -5.81], [-3.114, -3.272], [-5.051, -1.345], [-7.35, -2.507], [-7.656, 1.176]] },
+      { id: 'keelung-river', name: 'Keelung River', halfWidthKm: 0.22, path: [[7.8, 3.69], [0.978, 1.997], [0.524, 4.645], [-3.85, 4.322], [-7.2, 8.855], [-10.5, 8.75]] },
     ],
   },
 
@@ -240,7 +241,45 @@ export const TAIPEI_CITY = {
     { id: 'songren', name: 'Songren Road', widthKm: 0.18, path: [[0.402, 0.771], [0.396, 0.587], [0.393, 0.32], [0.384, -0.206], [0.389, -0.424], [0.388, -0.61], [0.4, -0.794], [0.512, -1.014]] },
     // Songshou Rd — between the Grand Hyatt and the Taipei 101 block.
     { id: 'songshou', name: 'Songshou Road', widthKm: 0.16, path: [[-0.256, 0.247], [-0.106, 0.244], [0.12, 0.24], [0.333, 0.236]] },
+
+    // ---- Phase 3: full arterial grid (paths from geo-truth; 2-4 per district).
+    // wenlin came back as a 0.2 km stub from OSM - skipped; Shilin has
+    // zhongshan + chengde + shipai through it already.
+    { id: 'civic-blvd', name: 'Civic Boulevard', widthKm: 0.3, path: [[-6.023, 1.724], [-5.624, 1.859], [-3.004, 1.246], [-1.194, 1.183], [-0.401, 1.356], [0.015, 1.342], [0.633, 1.721], [1.237, 1.717]] },
+    { id: 'minquan', name: 'Minquan Road', widthKm: 0.26, path: [[-5.319, 3.232], [-2.273, 3.172], [-1.34, 3.081], [0.198, 3.276], [2.202, 3.9], [3.057, 3.868], [3.413, 3.706], [3.649, 3.693]] },
+    { id: 'minsheng', name: 'Minsheng Road', widthKm: 0.22, path: [[-5.496, 2.566], [-4.93, 2.577], [-4.117, 2.688], [-3.878, 2.692], [-2.746, 2.676], [-1.624, 2.651], [-1.025, 2.71], [0.37, 2.822]] },
+    { id: 'xinsheng', name: 'Xinsheng Road', widthKm: 0.26, path: [[-3.69, 4.089], [-3.723, 2.165], [-3.627, 1.777], [-3.513, 1.611], [-3.19, 1.282], [-3.206, 0.012], [-2.99, -0.744], [-3.086, -1.543]] },
+    { id: 'jianguo', name: 'Jianguo Road', widthKm: 0.26, path: [[-3.069, 3.732], [-2.848, 3.522], [-2.773, 3.343], [-2.809, 1.119], [-2.68, 0.495], [-2.691, -0.079], [-2.669, -0.285], [-2.712, -1.131]] },
+    { id: 'chengde', name: 'Chengde Road', widthKm: 0.24, path: [[-6.482, 9.621], [-5.401, 8.525], [-5.243, 7.33], [-4.881, 6.378], [-4.381, 6.118], [-4.155, 5.733], [-4.623, 4.23], [-4.827, 1.745]] },
+    { id: 'shipai', name: 'Shipai Road', widthKm: 0.2, path: [[-5.515, 8.743], [-4.974, 9.03], [-4.869, 9.186], [-4.755, 9.319], [-4.527, 9.402], [-4.314, 9.451], [-4.107, 9.766], [-3.931, 9.941]] },
+    { id: 'zhongcheng', name: 'Zhongcheng Road', widthKm: 0.18, path: [[-3.872, 7.798], [-3.606, 7.931], [-3.485, 8.116], [-3.368, 8.706], [-3.253, 8.898], [-3.15, 9.031], [-3.028, 9.258]] },
+    { id: 'neihu-road', name: 'Neihu Road', widthKm: 0.22, path: [[-0.522, 5.66], [1.452, 4.978], [1.667, 5.321], [1.843, 5.226], [2.038, 5.477], [2.456, 5.304], [2.845, 5.652]] },
+    { id: 'chenggong-road', name: 'Chenggong Road', widthKm: 0.2, path: [[2.689, 3.054], [2.558, 5.073], [3.186, 4.955], [3.559, 4.955], [3.537, 5.229], [3.787, 5.3], [3.974, 5.458]] },
+    { id: 'nangang-road', name: 'Nangang Road', widthKm: 0.24, path: [[1.948, 2.032], [2.143, 2.116], [2.536, 2.169], [2.939, 2.297], [3.747, 2.187], [4.813, 2.388], [5.541, 2.333]] },
+    { id: 'academia-road', name: 'Academia Road', widthKm: 0.18, path: [[5.239, 1.071], [5.146, 1.265], [5.14, 1.475], [5.177, 1.672], [5.16, 1.873], [5.216, 2.103], [5.248, 2.311]] },
+    { id: 'chongxin', name: 'Chongxin Road', widthKm: 0.24, path: [[-9.911, 0.933], [-9.586, 1.311], [-8.852, 1.582], [-7.886, 2.42], [-7.798, 2.561], [-7.254, 2.982], [-6.289, 3.324]] },
+    { id: 'wenhua-banqiao', name: 'Wenhua Road', widthKm: 0.24, path: [[-10.745, -2.597], [-10.5, -2.297], [-9.906, -1.486], [-9.703, -1.131], [-9.436, -0.611], [-9.301, -0.424], [-8.795, 0.184], [-8.575, 0.256]] },
+    { id: 'beixin', name: 'Beixin Road', widthKm: 0.24, path: [[-2.659, -8.219], [-2.347, -7.384], [-2.221, -6.981], [-2.182, -6.827], [-2.176, -6.442], [-2.183, -6.267], [-2.377, -5.442]] },
+    { id: 'yonghe-road', name: 'Yonghe Road', widthKm: 0.2, path: [[-6.523, -3.389], [-5.24, -3.244], [-5.194, -3.1], [-5.143, -2.909], [-5.059, -2.668], [-5.017, -2.502], [-4.956, -2.275], [-4.899, -2.045]] },
+    { id: 'jingping', name: 'Jingping Road', widthKm: 0.2, path: [[-6.848, -3.381], [-6.799, -3.619], [-6.607, -3.817], [-6.375, -4.199], [-6.173, -4.411], [-4.614, -4.636], [-4.263, -4.756], [-3.834, -4.821]] },
+    { id: 'datong-xizhi', name: 'Datong Road', widthKm: 0.24, path: [[5.773, 2.346], [6.496, 2.248], [7.01, 2.62], [9.575, 3.729], [10.05, 4.098], [10.255, 4.646], [10.578, 4.85]] },
+    { id: 'sanmin-luzhou', name: 'Sanmin Road', widthKm: 0.2, path: [[-10.419, 6.611], [-10.249, 6.439], [-10.085, 6.35], [-9.86, 6.272], [-9.699, 6.17], [-9.218, 5.745], [-9.046, 5.583], [-8.948, 5.385]] },
+    { id: 'zhongzheng-xinzhuang', name: 'Zhongzheng Road', widthKm: 0.24, path: [[-15.533, -1.396], [-14.962, -1.044], [-14.658, -0.648], [-13.165, -0.136], [-11.528, 0.214], [-10.963, 0.09], [-10.598, 0.509]] },
+    { id: 'zhongyang-tucheng', name: 'Zhongyang Road', widthKm: 0.22, path: [[-14.732, -8.241], [-14.371, -7.975], [-13.796, -7.698], [-13.064, -7.489], [-12.756, -7.237], [-12.384, -6.536], [-12.12, -5.453], [-11.606, -4.558]] },
   ],
+
+  // River crossings, rendered as arched decks (deck over water) by main.js.
+  // Paths from geo-truth bridge ways; cross-river districts visibly connect.
+  bridges: [
+    { id: 'taipei-bridge', name: 'Taipei Bridge', widthKm: 0.24, path: [[-6.217, 3.348], [-5.857, 3.311]] },
+    { id: 'zhongxiao-bridge', name: 'Zhongxiao Bridge', widthKm: 0.26, path: [[-6.11, 1.83], [-6.17, 1.866], [-6.233, 1.905], [-6.831, 2.27]] },
+    { id: 'dazhi-bridge', name: 'Dazhi Bridge', widthKm: 0.22, path: [[-2.031, 5.039], [-2.041, 4.571], [-2.04, 4.511], [-2.043, 4.347]] },
+    { id: 'minquan-bridge', name: 'Minquan Bridge', widthKm: 0.22, path: [[0.669, 3.397], [1.055, 3.539], [1.154, 3.572], [1.31, 3.618]] },
+  ],
+
+  // Songshan Airport: the runway void is one of the real map's most
+  // recognizable features. main.js renders the strip and keeps blocks off it.
+  airfield: { runway: { id: 'songshan-runway', widthKm: 0.09, path: [[0.089, 3.919], [-1.079, 3.965], [-1.547, 3.982], [-2.508, 4.02]] } },
 
   transit: {
     metroLines: [
@@ -340,6 +379,9 @@ export const TAIPEI_CITY = {
     ], claim: 3.2, extra: -0.05, labelY: 4, base: '#34343c' } },
     { id: 'miramar-ferris-wheel', name: 'Miramar Ferris Wheel', builder: 'buildFerrisWheel', at: [-0.71, 5.483], placement: { scale: 1.15, foot: 3.9, ar: 3.3, claim: 2.3, extra: -0.10, labelY: 9.2, merge: false, base: '#cfcabe' } },
     { id: 'palace-museum', name: 'Palace Museum', builder: 'buildPalaceMuseum', at: [-1.585, 7.506], placement: { foot: 4.4, terrainPin: true, cols: [{x:0,z:0,r:3.0},{x:0,z:4.5,r:0.55},{x:-2.4,z:4.5,r:0.5},{x:2.4,z:4.5,r:0.5}], claim: 2.6, extra: -0.25, labelY: 6, base: '#ded6c2' } },
+    // Songshan Airport terminal, south of the runway strip (airfield above).
+    // terrainPin: the runway void must not let declump slide the building.
+    { id: 'songshan-terminal', name: 'Songshan Airport', builder: 'buildAirportTerminal', at: [-1.15, 3.55], placement: { foot: 3.4, terrainPin: true, cols: [{x:-2.4,z:-0.2,r:0.75},{x:-1.2,z:-0.35,r:0.7},{x:0,z:-0.35,r:0.7},{x:1.2,z:-0.35,r:0.7},{x:2.0,z:-0.55,r:0.55}], claim: 2.6, extra: -0.08, labelY: 4.4, base: '#c9c4b6' } },
   ],
 
   shops: [

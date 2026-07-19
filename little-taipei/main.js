@@ -958,6 +958,54 @@ function buildRoads(){
     surfaceRibbon(Rd.pts, 0.03, null, 0.10, {mat:lineMat, subdiv:6});    // faint centre line
   }
 }
+// --- river bridges: arched decks OVER the water (roads/rivers hug terrain,
+//     so a crossing needs its own representation). Deck rises from each bank
+//     with a low arch — high enough mid-span that a wading player passes
+//     beneath. Purely visual: the riverbed below stays walkable as before.
+const BRIDGES=(CITY.bridges||[]).map(({id,name,widthKm:w,path:pts})=>({id,name,w,pts:warpPts(pts)}));
+function buildBridges(){
+  const deckMat=toon('#9a958a'), railMat=toon('#6d6a60'), pierMat=toon('#7e7a72');
+  for(const B of BRIDGES){
+    const pts=_densify(B.pts, 8), half=B.w*KM*0.5;
+    const a=pts[0], b=pts[pts.length-1];
+    const hA=terrain(mapDir(a[0],a[1])), hB=terrain(mapDir(b[0],b[1]));
+    const bank=Math.max(hA,hB), rise=1.5;
+    const deckH=t=>bank+0.12+rise*Math.sin(Math.PI*THREE.MathUtils.clamp(t,0,1));
+    const geoPos=[]; let pL=null,pR=null; const rails=[[],[]];
+    for(let i=0;i<pts.length;i++){
+      const t=i/(pts.length-1);
+      const dir=mapDir(pts[i][0],pts[i][1]);
+      const iA=Math.max(0,i-1), iB=Math.min(pts.length-1,i+1);
+      const tang=mapDir(pts[iB][0],pts[iB][1]).sub(mapDir(pts[iA][0],pts[iA][1]));
+      const up=dir.clone(); tang.addScaledVector(up,-tang.dot(up)); if(tang.lengthSq()<1e-9) tang.copy(CITY_EAST); tang.normalize();
+      const right=new THREE.Vector3().crossVectors(up,tang).normalize();
+      const base=dir.clone().multiplyScalar(R+deckH(t));
+      const L=base.clone().addScaledVector(right,-half), Rr=base.clone().addScaledVector(right,half);
+      rails[0].push(L.clone().addScaledVector(up,0.34)); rails[1].push(Rr.clone().addScaledVector(up,0.34));
+      if(pL){ geoPos.push(pL.x,pL.y,pL.z, pR.x,pR.y,pR.z, L.x,L.y,L.z, pR.x,pR.y,pR.z, Rr.x,Rr.y,Rr.z, L.x,L.y,L.z); }
+      pL=L; pR=Rr;
+      // piers: mid-span samples drop a leg to the riverbed
+      if(i>0 && i<pts.length-1 && i%3===0){
+        const g=groundR(dir);
+        planetGroup.add(cylBetween(dir.clone().multiplyScalar(g-0.2), base.clone(), 0.16, pierMat));
+      }
+    }
+    const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(geoPos,3)); g.computeVertexNormals();
+    const mat=deckMat.clone(); mat.side=THREE.DoubleSide;
+    const mesh=new THREE.Mesh(g,mat); mesh.castShadow=true; mesh.receiveShadow=true; planetGroup.add(mesh);
+    for(const rail of rails) for(let i=0;i<rail.length-1;i++) planetGroup.add(cylBetween(rail[i],rail[i+1],0.05,railMat));
+  }
+}
+// --- Songshan Airport: runway strip + apron (the void itself is enforced in
+//     buildCityBlocks via RUNWAY_CLEAR). Local widths stay physical, like roads.
+const RUNWAY = CITY.airfield ? warpPts(CITY.airfield.runway.path) : null;
+function buildAirfield(){
+  if(!RUNWAY) return;
+  const w=CITY.airfield.runway.widthKm;
+  surfaceRibbon(RUNWAY, w+0.05, null, 0.024, {mat:toon('#b9b4a6'), subdiv:4});  // mown verge
+  surfaceRibbon(RUNWAY, w, null, 0.05, {mat:toon('#5d5c58'), subdiv:4});        // asphalt
+  surfaceRibbon(RUNWAY, 0.012, null, 0.08, {mat:toon('#e9e4d6'), subdiv:5});    // centreline
+}
 // --- MRT lines (official colours)
 function buildMRT(){
   for(const line of CITY.transit.metroLines){
@@ -1285,6 +1333,7 @@ function buildCityBlocks(){
   for(let ci=0; ci<cand.length && placed<MAXB; ci++){
     { const {x,y,den,priority}=cand[ci];
       if(roadDist(x,y) < ROAD_CLEAR) continue;    // leave a camera-wide corridor along every avenue
+      if(RUNWAY && polyDist(x,y,RUNWAY) < 0.36) continue;   // Songshan runway void + apron stays open
       if(inVista(x,y)) continue;                  // protect the spawn street view
       if(inVista101(x,y)) continue;               // …and the spawn → 101 sightline itself
       if(Math.hypot(x-SPAWN_KM.x,y-SPAWN_KM.y) < 0.30) continue;  // immediate player clearance only
@@ -1923,7 +1972,7 @@ function placeShops(){
 }
 
 function buildTaipeiWorld(){
-  buildRivers(); buildRoads(); buildMRT();
+  buildRivers(); buildRoads(); buildBridges(); buildAirfield(); buildMRT();
   placeAllLandmarks();
   placeShops();
   buildXiangshanTrail();     // claims the stair corridor before blocks & forest scatter
