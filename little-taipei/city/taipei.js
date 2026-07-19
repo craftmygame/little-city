@@ -356,8 +356,14 @@ export const TAIPEI_CITY = {
     // Shin Kong Mitsukoshi Xinyi Place A11 — boxy department store with the big
     // LED billboard face; ground-floor shop hall is walkable.
     { id: 'mitsukoshi-a11', name: 'Mitsukoshi A11', builder: 'buildMitsukoshiA11', at: [0.277, 0.322], placement: { foot: 2.4, cols: [{x:-1.5,z:-0.4,r:.8},{x:1.5,z:-0.4,r:.8},{x:0,z:-1.15,r:.9},{x:-1.25,z:1.1,r:.45},{x:1.25,z:1.1,r:.45}], claim: 1.9, extra: -0.08, labelY: 4.6, base: '#cfcabe' } },
-    { id: 'taipei-arena', name: 'Taipei Arena', builder: 'buildArena', at: [-1.45, 1.882], placement: { scale: 1.6, foot: 4.8, ar: 4.0, claim: 2.6, extra: -0.10, labelY: 6.1, base: '#cdc8bc' } },
-    { id: 'raohe-night-market', name: 'Raohe Night Market', builder: 'buildNightMarket', at: [1.066, 1.878], placement: { foot: 6.6, cols: [
+    // Walk-in hall since Phase 4: cols ring the drum, the +Z entrance stays
+    // open; one extra circle guards the stage block.
+    { id: 'taipei-arena', name: 'Taipei Arena', builder: 'buildArena', at: [-1.45, 1.882], placement: { scale: 1.6, foot: 4.8, cols: [
+      {x:1.45,z:1.39,r:.55},{x:2.08,z:0.42,r:.55},{x:1.98,z:-0.7,r:.55},{x:1.18,z:-1.58,r:.55},
+      {x:0,z:-1.9,r:.55},{x:-1.18,z:-1.58,r:.55},{x:-1.98,z:-0.7,r:.55},{x:-2.08,z:0.42,r:.55},{x:-1.45,z:1.39,r:.55},
+      {x:0,z:-1.4,r:.5},{x:2.65,z:-0.55,r:1.0}
+    ], claim: 2.6, extra: -0.10, labelY: 6.1, base: '#cdc8bc' } },
+    { id: 'raohe-night-market', name: 'Raohe Night Market', builder: 'buildRaoheMarket', at: [1.066, 1.878], placement: { foot: 6.6, cols: [
       {x:-1.5,z:3,r:.52},{x:-1.5,z:1.8,r:.52},{x:-1.5,z:.6,r:.52},{x:-1.5,z:-.6,r:.52},{x:-1.5,z:-1.8,r:.52},{x:-1.5,z:-3,r:.52},
       {x:1.5,z:3,r:.52},{x:1.5,z:1.8,r:.52},{x:1.5,z:.6,r:.52},{x:1.5,z:-.6,r:.52},{x:1.5,z:-1.8,r:.52},{x:1.5,z:-3,r:.52},
       {x:-1.55,z:4.35,r:.3},{x:1.55,z:4.35,r:.3},{x:-1.55,z:4.9,r:.28},{x:1.55,z:4.9,r:.28},{x:-1.12,z:-4.35,r:.24},{x:1.12,z:-4.35,r:.24},{x:4.1,z:-2.35,r:1.55}
@@ -368,21 +374,38 @@ export const TAIPEI_CITY = {
       {x:0,z:-6.55,r:.8},
       {x:-6,z:0,r:1.8},{x:6,z:0,r:1.8},{x:-3.7,z:6,r:.34},{x:-2.25,z:6,r:.34},{x:-1.18,z:6,r:.28},{x:1.18,z:6,r:.28},{x:2.25,z:6,r:.34},{x:3.7,z:6,r:.34}
     ], claim: 5.0, extra: -0.12, labelY: 10, face: -90, base: '#e7e2d5' } },
-    { id: 'presidential-office', name: 'Presidential Office', builder: 'buildPresidentialOffice', at: [-5.298, 0.696], placement: { foot: 4.6, cols: [{x:-3,z:0,r:2.1},{x:0,z:0,r:2.1},{x:3,z:0,r:2.1}], claim: 2.4, extra: -0.15, labelY: 7.5, face: -90, base: '#d8d2c4' } },
+    // cols hug the wings + tower sides; the portico bay (x≈0, +z) stays open
+    // so the entry hall is reachable (the old centre circle sat ON the door).
+    { id: 'presidential-office', name: 'Presidential Office', builder: 'buildPresidentialOffice', at: [-5.298, 0.696], placement: { foot: 4.6, cols: [
+      {x:-3.1,z:0,r:1.9},{x:3.1,z:0,r:1.9},{x:0,z:-1.2,r:1.3},
+      {x:-1.05,z:1.9,r:0.35},{x:1.05,z:1.9,r:0.35}
+    ], claim: 2.4, extra: -0.15, labelY: 7.5, face: -90, base: '#d8d2c4' } },
     // Walk-in concourse: cols trace the shell walls; all four door gaps open.
     { id: 'main-station', name: 'Taipei Main Station', builder: 'buildMainStation', at: [-4.779, 1.55], placement: { foot: 4.0, cols: [
       {x:-1.9,z:2.5,r:.6},{x:1.9,z:2.5,r:.6},{x:-1.9,z:-2.5,r:.6},{x:1.9,z:-2.5,r:.6},
       {x:-2.89,z:1.6,r:.55},{x:-2.89,z:-1.6,r:.55},{x:2.89,z:1.6,r:.55},{x:2.89,z:-1.6,r:.55},
       {x:-2.75,z:2.35,r:.5},{x:2.75,z:2.35,r:.5},{x:-2.75,z:-2.35,r:.5},{x:2.75,z:-2.35,r:.5}
     ], claim: 2.4, extra: -0.15, labelY: 6, base: '#cfcabe' } },
-    { id: 'longshan-temple', name: 'Longshan Temple', builder: 'buildLongshanTemple', at: [-6.518, 0.395], placement: { scale: 1.1, foot: 4.0, cols: [{x:0,z:2.2,r:2.3},{x:0,z:0,r:2.2},{x:0,z:-2.3,r:2.2},{x:-2.7,z:1.65,r:1.0},{x:-2.7,z:-1.65,r:1.0},{x:2.7,z:1.65,r:1.0},{x:2.7,z:-1.65,r:1.0}], claim: 2.0, extra: -0.10, labelY: 5.1, base: '#cdbfa1' } },
+    // cols trace side corridors + hall flanks; the axial doorway route
+    // (front hall door -> incense courtyard -> main hall) stays open.
+    { id: 'longshan-temple', name: 'Longshan Temple', builder: 'buildLongshanTemple', at: [-6.518, 0.395], placement: { scale: 1.1, foot: 4.0, cols: [
+      {x:-1.6,z:2.2,r:0.85},{x:1.6,z:2.2,r:0.85},
+      {x:-1.5,z:0,r:0.8},{x:1.5,z:0,r:0.8},{x:0,z:-0.6,r:0.7},
+      {x:-1.6,z:-2.3,r:0.9},{x:1.6,z:-2.3,r:0.9},{x:0,z:-2.9,r:0.8},
+      {x:-2.7,z:1.65,r:1.0},{x:-2.7,z:-1.65,r:1.0},{x:2.7,z:1.65,r:1.0},{x:2.7,z:-1.65,r:1.0}
+    ], claim: 2.0, extra: -0.10, labelY: 5.1, base: '#cdbfa1' } },
     { id: 'baoan-temple', name: 'Bao’an Temple', builder: 'buildBaoanTemple', at: [-4.937, 4.356], placement: { foot: 2.6, cols: [{x:0,z:1.35,r:1.5},{x:0,z:-0.55,r:1.8}], claim: 1.7, extra: -0.10, labelY: 4, base: '#cdbfa1' } },
-    { id: 'grand-hotel', name: 'Grand Hotel', builder: 'buildGrandHotel', at: [-3.844, 4.979], placement: { scale: 1.35, foot: 7.3, cols: [{x:-4.7,z:0,r:2.7},{x:0,z:0,r:3.2},{x:4.7,z:0,r:2.7}], claim: 3.8, extra: -0.20, labelY: 9.5, base: '#daccb4' } },
-    { id: 'shilin-night-market', name: 'Shilin Night Market', builder: 'buildNightMarket', at: [-3.985, 6.031], placement: { foot: 6.6, terrainPin: true, cols: [
+    { id: 'grand-hotel', name: 'Grand Hotel', builder: 'buildGrandHotel', at: [-3.844, 4.979], placement: { scale: 1.35, foot: 7.3, cols: [{x:-4.7,z:0,r:2.7},{x:0,z:0,r:3.2},{x:4.7,z:0,r:2.7}], claim: 3.8, extra: -0.20, labelY: 11, base: '#daccb4' } },
+    // Shilin variant: no paifang gates (that's a Raohe feature), red-brick
+    // main building where Raohe keeps Ciyou Temple, plus a second lane —
+    // wider footprint to sell the sprawl.
+    { id: 'shilin-night-market', name: 'Shilin Night Market', builder: 'buildShilinMarket', at: [-3.985, 6.031], placement: { foot: 7.4, terrainPin: true, cols: [
       {x:-1.5,z:3,r:.52},{x:-1.5,z:1.8,r:.52},{x:-1.5,z:.6,r:.52},{x:-1.5,z:-.6,r:.52},{x:-1.5,z:-1.8,r:.52},{x:-1.5,z:-3,r:.52},
       {x:1.5,z:3,r:.52},{x:1.5,z:1.8,r:.52},{x:1.5,z:.6,r:.52},{x:1.5,z:-.6,r:.52},{x:1.5,z:-1.8,r:.52},{x:1.5,z:-3,r:.52},
-      {x:-1.55,z:4.35,r:.3},{x:1.55,z:4.35,r:.3},{x:-1.12,z:-4.35,r:.24},{x:1.12,z:-4.35,r:.24},{x:4.1,z:-2.35,r:1.55}
-    ], claim: 3.2, extra: -0.05, labelY: 4, base: '#34343c' } },
+      {x:-4.65,z:3.1,r:.5},{x:-4.65,z:1.9,r:.5},{x:-4.65,z:0.9,r:.5},{x:-4.65,z:-0.2,r:.5},{x:-4.65,z:-1.2,r:.5},{x:-4.65,z:-2.3,r:.5},
+      {x:-1.95,z:3.1,r:.5},{x:-1.95,z:1.9,r:.5},{x:-1.95,z:0.9,r:.5},{x:-1.95,z:-1.2,r:.5},{x:-1.95,z:-2.3,r:.5},
+      {x:4.1,z:-2.35,r:1.55}
+    ], claim: 3.6, extra: -0.05, labelY: 4, base: '#34343c' } },
     { id: 'miramar-ferris-wheel', name: 'Miramar Ferris Wheel', builder: 'buildFerrisWheel', at: [-0.71, 5.483], placement: { scale: 1.15, foot: 3.9, ar: 3.3, claim: 2.3, extra: -0.10, labelY: 9.2, merge: false, base: '#cfcabe' } },
     { id: 'palace-museum', name: 'Palace Museum', builder: 'buildPalaceMuseum', at: [-1.585, 7.506], placement: { foot: 4.4, terrainPin: true, cols: [{x:0,z:0,r:3.0},{x:0,z:4.5,r:0.55},{x:-2.4,z:4.5,r:0.5},{x:2.4,z:4.5,r:0.5}], claim: 2.6, extra: -0.25, labelY: 6, base: '#ded6c2' } },
     // Songshan Airport terminal, south of the runway strip (airfield above).

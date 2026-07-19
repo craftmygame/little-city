@@ -345,29 +345,36 @@ function buildGrandHotel(CTX){
   g.add(CTX.box(3.6,0.18,0.4, stone, 0, 0.36, 1.7));
   g.add(CTX.box(10,0.07,0.12, stone, 0, 0.64, 1.66));
   for(let i=0;i<13;i++){ const x=-4.8+i*0.8; g.add(CTX.box(0.08,0.22,0.1, stone, x, 0.5, 1.66)); }
-  g.add(CTX.box(4.2,2.6,3.0, wall, 0, 1.85, 0));
-  g.add(CTX.box(3.0,1.8,2.6, wall, -3.5, 1.45, 0));
-  g.add(CTX.box(3.0,1.8,2.6, wall,  3.5, 1.45, 0));
-  g.add(CTX.box(4.3,0.2,3.05, goldTr, 0, 3.1, 0));
+  // 14-story verticality: the real hotel is a tall red-and-gold slab, so the
+  // central block rises well above the wings, with stacked floor bands
+  g.add(CTX.box(4.2,4.4,3.0, wall, 0, 2.75, 0));
+  g.add(CTX.box(3.0,2.6,2.6, wall, -3.5, 1.85, 0));
+  g.add(CTX.box(3.0,2.6,2.6, wall,  3.5, 1.85, 0));
+  g.add(CTX.box(4.3,0.2,3.05, goldTr, 0, 5.0, 0));
+  for(const by of [2.30, 3.35, 4.40]) g.add(CTX.box(4.28,0.10,3.04, goldTr, 0, by, 0));   // string courses
   for(let i=0;i<7;i++){
     const x=-1.8+i*0.6;
-    g.add(CTX.cyl(0.15,0.17,2.3, verm, x, 1.7, 1.62, 8));
-    g.add(CTX.box(0.36,0.12,0.36, goldTr, x, 2.92, 1.62));
+    g.add(CTX.cyl(0.15,0.17,4.1, verm, x, 2.6, 1.62, 8));       // full-height red columns
+    g.add(CTX.box(0.36,0.12,0.36, goldTr, x, 4.72, 1.62));
     g.add(CTX.box(0.36,0.1,0.36, stone, x, 0.6, 1.62));
   }
   for(const x of [-4.6,-4.0,-3.4,-2.8, 2.8,3.4,4.0,4.6]){
-    g.add(CTX.cyl(0.13,0.15,1.6, verm, x, 1.35, 1.42, 8));
-    g.add(CTX.box(0.3,0.1,0.3, goldTr, x, 2.2, 1.42));
+    g.add(CTX.cyl(0.13,0.15,2.4, verm, x, 1.75, 1.42, 8));
+    g.add(CTX.box(0.3,0.1,0.3, goldTr, x, 3.0, 1.42));
   }
-  for(let i=0;i<5;i++){ const x=-1.6+i*0.8; g.add(CTX.box(0.42,0.7,0.06, win, x, 2.55, 1.53)); g.add(CTX.box(0.5,0.08,0.06, goldTr, x, 2.95, 1.53)); }
-  for(const x of [-4.4,-3.6,-2.8, 2.8,3.6,4.4]) g.add(CTX.box(0.4,0.6,0.06, win, x, 1.7, 1.43));
-  for(let i=0;i<3;i++){ const z=-0.8+i*0.8; g.add(CTX.box(0.06,0.6,0.4, win, 2.12, 2.5, z)); g.add(CTX.box(0.06,0.6,0.4, win, -2.12, 2.5, z)); }
+  for(const wy of [1.75, 2.85, 3.95]) for(let i=0;i<5;i++){
+    const x=-1.6+i*0.8;
+    g.add(CTX.box(0.42,0.62,0.06, win, x, wy, 1.53));
+    g.add(CTX.box(0.5,0.07,0.06, goldTr, x, wy+0.38, 1.53));
+  }
+  for(const wy of [1.35, 2.35]) for(const x of [-4.4,-3.6,-2.8, 2.8,3.6,4.4]) g.add(CTX.box(0.4,0.55,0.06, win, x, wy, 1.43));
+  for(const wy of [2.5, 3.6]) for(let i=0;i<3;i++){ const z=-0.8+i*0.8; g.add(CTX.box(0.06,0.6,0.4, win, 2.12, wy, z)); g.add(CTX.box(0.06,0.6,0.4, win, -2.12, wy, z)); }
   g.add(CTX.box(0.9,1.4,0.12, dark, 0, 1.25, 1.55));
   g.add(CTX.box(1.1,0.16,0.14, goldTr, 0, 2.0, 1.55));
-  const cr = makeRoof(5.8,3.7,2.0, gold, goldHi, green); cr.position.y = 3.15; g.add(cr);
-  g.add(CTX.sph(0.18, goldHi, 0, 5.2, 0));
-  const lw = makeRoof(3.4,2.9,1.1, gold, goldHi, green); lw.position.set(-3.5,2.35,0); g.add(lw);
-  const rw = makeRoof(3.4,2.9,1.1, gold, goldHi, green); rw.position.set( 3.5,2.35,0); g.add(rw);
+  const cr = makeRoof(5.8,3.7,2.0, gold, goldHi, green); cr.position.y = 5.05; g.add(cr);
+  g.add(CTX.sph(0.18, goldHi, 0, 7.15, 0));
+  const lw = makeRoof(3.4,2.9,1.1, gold, goldHi, green); lw.position.set(-3.5,3.15,0); g.add(lw);
+  const rw = makeRoof(3.4,2.9,1.1, gold, goldHi, green); rw.position.set( 3.5,3.15,0); g.add(rw);
   return g;
 }
 
@@ -535,7 +542,8 @@ function buildBaoanTemple(CTX){
     red: CTX.toon('#C43530'), redDk: CTX.toon('#8E2A24'), stone: CTX.toon('#A5A29A'),
     stoneD: CTX.toon('#8B887F'), gold: CTX.toon('#E0A800'), wood: CTX.toon('#7A583A'),
     lantern: CTX.toon('#D62828',{emissive:'#FF5C3C',emissiveIntensity:0.5}),
-    jG: CTX.toon('#2E8B57'), jR: CTX.toon('#C0392B'), jB: CTX.toon('#2A6F97')
+    jG: CTX.toon('#2E8B57'), jR: CTX.toon('#C0392B'), jB: CTX.toon('#2A6F97'),
+    dragonStone: CTX.toon('#6B7280')
   };
   function jiannian(parent,w,ridgeY){
     const cols=[M.jG,M.gold,M.jR,M.jB]; const n=Math.max(4,Math.round(w*1.7));
@@ -569,7 +577,7 @@ function buildBaoanTemple(CTX){
       const s=CTX.sph(0.10,M.lantern,x,y-0.04,z,8); s.scale.y=1.3; parent.add(s);
       parent.add(CTX.cyl(0.03,0.01,0.06,M.gold,x,y-0.19,z,5)); }
   }
-  function buildHall(w,d,colH,withDoors){
+  function buildHall(w,d,colH,withDoors,dragonCols){
     const h=CTX.group(), halfW=w/2, halfD=d/2;
     h.add(CTX.box(w+0.4,0.16,d+0.36,M.stone,0,-0.08,0));
     h.add(CTX.box(w+0.24,0.07,d+0.18,M.stoneD,0,0.00,0));
@@ -579,7 +587,14 @@ function buildBaoanTemple(CTX){
     if(withDoors) h.add(CTX.box(w*0.55,colH*0.88,0.07,M.redDk,0,colH*0.46,-halfD+0.10));
     const nx=Math.max(2,Math.round(w/1.2)+1);
     for(let i=0;i<nx;i++){ const x=(i/(nx-1)-0.5)*w*0.88;
-      h.add(CTX.cyl(0.095,0.11,colH,M.red,x,colH/2,halfD-0.11,10));
+      const isDragon = dragonCols && (i===0 || i===nx-1);
+      // the entrance pair are the famous carved grey-stone dragon columns —
+      // thicker, stone-toned, with a spiral of coil bumps up the shaft
+      h.add(CTX.cyl(isDragon?0.13:0.095, isDragon?0.15:0.11, colH, isDragon?M.dragonStone:M.red, x, colH/2, halfD-0.11, 10));
+      if(isDragon) for(let b=0;b<7;b++){
+        const ang=b*1.15, by=0.25+b*(colH-0.6)/6;
+        h.add(CTX.sph(0.055, b%2?M.gold:M.dragonStone, x+Math.sin(ang)*0.15, by, halfD-0.11+Math.cos(ang)*0.15, 6));
+      }
       h.add(CTX.box(0.24,0.12,0.24,M.wood,x,colH+0.02,halfD-0.11)); }
     h.add(CTX.box(w+0.18,0.14,0.14,M.wood,0,colH+0.05,halfD-0.04));
     h.add(CTX.box(w+0.18,0.09,0.09,M.red,0,colH+0.15,halfD-0.04));
@@ -590,7 +605,7 @@ function buildBaoanTemple(CTX){
   }
   g.add(CTX.box(3.5,0.09,4.0,M.stone,0,0.045,0));
   g.add(CTX.box(3.0,0.05,3.5,M.stoneD,0,0.10,0));
-  const gate=buildHall(2.6,1.1,2.10,true ); gate.position.set(0,0.13, 1.35); g.add(gate);
+  const gate=buildHall(2.6,1.1,2.10,true,true); gate.position.set(0,0.13, 1.35); g.add(gate);
   const main=buildHall(3.0,1.8,2.30,true ); main.position.set(0,0.13,-0.55); g.add(main);
   g.add(CTX.box(1.8,0.09,0.34,M.stoneD,0,0.09,2.05));
   g.add(CTX.box(2.1,0.05,0.34,M.stone, 0,0.04,2.28));
@@ -664,6 +679,12 @@ function buildPresidentialOffice(CTX){
   [-3.45, -2.70, -1.95, 1.95, 2.70, 3.45].forEach(x => rowY.forEach(y => g.add(archWindow(x, y, 1.83, 0))));
   [-3.45, -2.70, -1.95, -1.0, 0, 1.0, 1.95, 2.70, 3.45].forEach(x => rowY.forEach(y => g.add(archWindow(x, y, -1.83, Math.PI))));
   [-4.03, 4.03].forEach(sx => [-1.0, 0, 1.0].forEach(z => rowY.forEach(y => g.add(archWindow(sx, y, z, sx > 0 ? Math.PI/2 : -Math.PI/2)))));
+  // vertical white pilaster stripes between the wing arches — the red/white
+  // stripe rhythm is the facade's signature (was horizontal-only)
+  for (const x of [-3.83, -3.08, -2.33, -1.58, 1.58, 2.33, 3.08, 3.83]){
+    g.add(CTX.box(0.16, 2.40, 0.10, stone, x, 1.65, 1.78));
+    g.add(CTX.box(0.16, 2.40, 0.10, stone, x, 1.65, -1.78));
+  }
   return g;
 }
 
@@ -783,8 +804,15 @@ function buildSYSHall(CTX){
   A(CTX.box(0.62, 0.62, 0.4, bronze, 0, podTop + 0.81, -1.18));                   // seated figure
   A(CTX.box(0.5, 0.28, 0.42, bronze, 0, podTop + 0.62, -0.95));
   A(CTX.sph(0.17, bronze, 0, podTop + 1.24, -1.18, 8));
-  // front porch: red columns + door jambs framing the open entrance
+  // front porch: red columns + door jambs framing the open entrance —
+  // and the same colonnade wrapping the side and rear faces (the real hall
+  // has a full peristyle, not a front-only porch)
   for (const x of [-1.25, -0.62, 0.62, 1.25]) A(CTX.cyl(0.10, 0.115, bodyH, pier, x, podTop + bodyH/2, bodyW/2 + 0.34, 10));
+  for (const z of [-1.25, -0.62, 0.62, 1.25]){
+    A(CTX.cyl(0.10, 0.115, bodyH, pier, -(bodyW/2 + 0.34), podTop + bodyH/2, z, 10));
+    A(CTX.cyl(0.10, 0.115, bodyH, pier,  (bodyW/2 + 0.34), podTop + bodyH/2, z, 10));
+  }
+  for (const x of [-1.25, -0.62, 0.62, 1.25]) A(CTX.cyl(0.10, 0.115, bodyH, pier, x, podTop + bodyH/2, -(bodyW/2 + 0.34), 10));
   A(CTX.box(2.95, 0.18, 0.85, roofSh, 0, podTop + bodyH + 0.02, bodyW/2 + 0.12));
   A(CTX.box(0.14, 1.72, 0.14, dark, -0.92, podTop + 0.86, bodyW/2 - 0.06));
   A(CTX.box(0.14, 1.72, 0.14, dark,  0.92, podTop + 0.86, bodyW/2 - 0.06));
@@ -932,7 +960,15 @@ function buildGrandHyatt(CTX){
     for (let i = 1; i <= rows; i++) A(CTX.box(w + 0.04, 0.16, 2.2, win, cx, b + i*0.52 - 0.14, 0));
     A(CTX.box(w + 0.08, 0.10, 2.38, trim, cx, b + 0.02 + h, 0));
   };
-  wing(0, 2.4, 3.4, 1.42); wing(-2.0, 1.6, 3.4); wing(2.0, 1.6, 3.4);        // centre rises over an open lobby
+  // telescoping set-backs: outer wings shallowest, centre deepest + tallest
+  wing(0, 2.4, 3.4, 1.42); wing(-2.0, 1.6, 2.9); wing(2.0, 1.6, 2.9);
+  A(CTX.box(1.3, 0.5, 2.0, cream, -2.15, 3.35, 0)); A(CTX.box(1.3, 0.5, 2.0, cream, 2.15, 3.35, 0));
+  // low glass lobby wing reading from the street (was opaque cream);
+  // split around the porte-cochère so the entrance stays open
+  A(CTX.box(1.05, 0.55, 0.10, glass, -1.28, 0.62, 1.16));
+  A(CTX.box(1.05, 0.55, 0.10, glass,  1.28, 0.62, 1.16));
+  A(CTX.box(1.15, 0.08, 0.16, trim, -1.28, 0.95, 1.18));
+  A(CTX.box(1.15, 0.08, 0.16, trim,  1.28, 0.95, 1.18));
   // ground-floor lobby shell: back wall + side piers, the front stays open
   A(CTX.box(2.4, 1.2, 0.2, cream, 0, 0.82, -1.05));
   A(CTX.box(0.26, 1.2, 2.3, cream, -1.07, 0.82, 0));
@@ -957,7 +993,8 @@ function buildGrandHyatt(CTX){
 // ---------------------------------------------------------------------
 function buildBreezeNanShan(CTX){
   const g = CTX.group(); const A = m => (g.add(m), m);
-  const glass = CTX.toon('#6fa3ad'), glassHi = CTX.toon('#8dbcc2'), slab = CTX.toon('#c9cdd0');
+  // cooler silver-blue mirrored glass (was teal) per the audit
+  const glass = CTX.toon('#7f9db3'), glassHi = CTX.toon('#a3bfd0'), slab = CTX.toon('#c9cdd0');
   const podM = CTX.toon('#d9d4c8'), podGlass = CTX.toon('#46585c'), crown = CTX.toon('#e8eaec');
   A(CTX.box(3.3, 0.18, 2.6, podM, 0, 0.09, 0));                              // podium plinth
   // retail podium as a shell — walk in through the front to the atrium
@@ -976,18 +1013,32 @@ function buildBreezeNanShan(CTX){
   A(CTX.box(0.55, 0.9, 0.1, podGlass, -1.0, 0.66, 1.14));                    // storefront glazing
   A(CTX.box(0.55, 0.9, 0.1, podGlass,  1.0, 0.66, 1.14));
   A(CTX.box(3.1, 0.1, 2.4, slab, 0, 1.38, 0));
-  const H = 11.6, R0 = 1.05;                                                 // rounded tower shaft
-  const shaft = CTX.cyl(R0, R0 + 0.06, H, glass, 0, 1.43 + H/2, 0, 12);
-  shaft.scale.z = 0.82; A(shaft);
-  for (let i = 1; i <= 13; i++){                                             // horizontal slab lines
-    const ring = CTX.cyl(R0 + 0.045, R0 + 0.045, 0.05, slab, 0, 1.43 + (H * i / 14), 0, 12);
+  // rooftop garden on the podium (the real Breeze roof park)
+  const leaf = CTX.toon('#5f8a56');
+  for (const [gx, gz] of [[-1.1,0.8],[-0.6,-0.7],[0.9,0.9],[1.2,-0.5],[0.2,0.95]])
+    A(CTX.sph(0.22, leaf, gx, 1.58, gz, 7));
+  // tower shaft: 4 stacked, genuinely shrinking segments — the real tower
+  // tapers continuously; the old near-uniform cylinder read as a tube
+  const H = 11.6, R0 = 1.12, SEG = 4;
+  for (let s = 0; s < SEG; s++){
+    const hb = 1.43 + H * s / SEG, f0 = 1 - s * 0.075, f1 = 1 - (s + 1) * 0.075;
+    const seg = CTX.cyl(R0 * f1, R0 * f0, H / SEG, glass, 0, hb + H / SEG / 2, 0, 12);
+    seg.scale.z = 0.82; A(seg);
+    const ring = CTX.cyl(R0 * f1 + 0.04, R0 * f1 + 0.04, 0.05, slab, 0, hb + H / SEG, 0, 12);
     ring.scale.z = 0.82; A(ring);
   }
-  const face = CTX.box(0.7, H * 0.86, 0.06, glassHi, 0, 1.43 + H/2, 0.9);    // brighter front reveal
+  // vertical fins running the full shaft — the facade's real emphasis
+  for (let i = 0; i < 8; i++){
+    const a = i / 8 * Math.PI * 2 + Math.PI / 8;
+    const fin = CTX.box(0.06, H * 0.94, 0.10, glassHi, Math.sin(a) * 0.99, 1.43 + H / 2, Math.cos(a) * 0.81);
+    fin.rotation.y = a; fin.rotation.x = 0.012; A(fin);
+  }
+  const face = CTX.box(0.7, H * 0.9, 0.05, glassHi, 0, 1.43 + H/2, 0.86);    // brighter front reveal
   A(face);
-  const cr = CTX.cyl(0.72, R0, 0.85, crown, 0, 1.43 + H + 0.42, 0, 12);      // tapering crown
+  const fTop = 1 - SEG * 0.075;
+  const cr = CTX.cyl(0.6, R0 * fTop, 0.85, crown, 0, 1.43 + H + 0.42, 0, 12); // tapering crown
   cr.scale.z = 0.82; A(cr);
-  A(CTX.cyl(0.5, 0.6, 0.3, slab, 0, 1.43 + H + 1.0, 0, 10));
+  A(CTX.cyl(0.44, 0.54, 0.3, slab, 0, 1.43 + H + 1.0, 0, 10));
   return g;
 }
 
@@ -1018,8 +1069,13 @@ function buildMitsukoshiA11(CTX){
   A(CTX.box(0.5, 0.45, 1.2, counter,  0.9, 0.4, -0.2));
   A(CTX.box(0.7, 0.62, 0.1, glass, -0.85, 0.5, 1.26));                       // street-level vitrines
   A(CTX.box(0.7, 0.62, 0.1, glass,  0.85, 0.5, 1.26));
-  A(CTX.box(1.5, 1.15, 0.1, led, -0.75, 1.95, 1.27));                        // LED billboard
-  for (let i = 0; i < 3; i++) A(CTX.box(0.9 - i*0.22, 0.07, 0.04, ledDash, -0.75, 1.62 + i*0.34, 1.33));
+  // giant LED billboard wrapping the chamfered CORNER (the real A11's
+  // signature is the corner screen facing the Xinyi intersection)
+  const corner = CTX.group();
+  corner.position.set(1.28, 1.95, 0.95); corner.rotation.y = Math.PI/4;
+  corner.add(CTX.box(1.7, 1.35, 0.12, led, 0, 0, 0));
+  for (let i = 0; i < 3; i++) corner.add(CTX.box(1.1 - i*0.24, 0.08, 0.05, ledDash, 0, -0.38 + i*0.36, 0.08));
+  A(corner);
   A(CTX.box(0.7, 0.3, 0.08, redM, 1.05, 2.35, 1.27));                        // house sign
   A(CTX.box(3.5, 0.14, 2.6, trim, 0, 2.72, 0));                              // parapet
   A(CTX.box(1.2, 0.32, 0.9, stoneD, -0.6, 2.92, -0.5));                      // roof plant
@@ -1027,7 +1083,9 @@ function buildMitsukoshiA11(CTX){
 }
 function buildCityHall(CTX){
   const T = CTX.THREE; const g = CTX.group(); const A = m => (g.add(m), m);
-  const glass = CTX.toon('#6E8CA0'), glassD = CTX.toon('#3F5360'), frame = CTX.toon('#C3C7CB'), plazaM = CTX.toon('#cfcabb'), metal = CTX.toon('#8A9196');
+  // body reads as white/light-grey precast with punched dark window grids
+  // (the old blue-glass dominance was inverted vs the real building)
+  const glass = CTX.toon('#C6CAC9'), glassD = CTX.toon('#3F5360'), frame = CTX.toon('#D8DBDD'), plazaM = CTX.toon('#cfcabb'), metal = CTX.toon('#8A9196');
   A(CTX.box(6.6, 0.14, 3.0, plazaM, 0, 0.07, 1.7));
   A(CTX.box(6.2, 0.20, 2.6, frame, 0, 0.10, -0.1));
   const panel = (w, h, cx, cy, cz) => {
@@ -1044,8 +1102,13 @@ function buildCityHall(CTX){
     A(CTX.box(1.1, 0.55, 1.05, glass, x0, 3.575, 0)); A(CTX.box(1.2, 0.10, 1.15, frame, x0, 3.85, 0)); panel(0.9, 0.45, x0, 3.575, 0.525);
   };
   tower(1); tower(-1);
-  // central atrium floats over an open civic lobby (walk in from the plaza)
-  A(CTX.box(2.6, 1.3, 1.5, glass, 0, 1.7, 0)); A(CTX.box(2.8, 0.12, 1.6, frame, 0, 2.35, 0)); panel(2.3, 1.1, 0, 1.70, 0.75);
+  // rooftop antenna (the real twin slabs carry one) + red nameplate
+  A(CTX.cyl(0.035, 0.05, 1.35, metal, 1.9, 4.55, 0, 8));
+  A(CTX.sph(0.07, CTX.toon('#e23a2e',{emissive:'#e23a2e',emissiveIntensity:0.5}), 1.9, 5.28, 0, 8));
+  A(CTX.box(1.25, 0.24, 0.07, CTX.toon('#C0392B'), 0, 2.52, 0.96));
+  // central atrium floats over an open civic lobby (walk in from the plaza);
+  // narrowed so the void between the towers reads from the plaza
+  A(CTX.box(2.0, 1.3, 1.5, glass, 0, 1.7, 0)); A(CTX.box(2.2, 0.12, 1.6, frame, 0, 2.35, 0)); panel(1.7, 1.1, 0, 1.70, 0.75);
   A(CTX.box(2.6, 1.05, 0.14, glassD, 0, 0.575, -0.68));                     // lobby back wall
   A(CTX.box(0.5, 1.05, 1.4, glassD, -1.05, 0.575, 0));                      // side stubs
   A(CTX.box(0.5, 1.05, 1.4, glassD,  1.05, 0.575, 0));
@@ -1060,22 +1123,47 @@ function buildCityHall(CTX){
   return g;
 }
 function buildArena(CTX){
+  // silver rounded box + flatter cap, hollowed into a walk-in hall (ice rink
+  // + stage), with the big corner LED screen and a low ice-rink annex.
   const T = CTX.THREE; const g = CTX.group(); const A = m => (g.add(m), m);
-  const drumM = CTX.toon('#D6D2C6'), domeM = CTX.toon('#9FB0B8'), bandM = CTX.toon('#B7B3A8'), darkM = CTX.toon('#5A5650');
+  const drumM = CTX.toon('#D6D2C6', { side: T.DoubleSide }), domeM = CTX.toon('#9FB0B8', { side: T.DoubleSide }), bandM = CTX.toon('#B7B3A8'), darkM = CTX.toon('#5A5650');
   const signM = CTX.toon('#e23a2e', { emissive:'#e23a2e', emissiveIntensity:0.4 }), baseM = CTX.toon('#9AA0A0');
+  const ledM = CTX.toon('#141a20', { emissive:'#3a86ff', emissiveIntensity:0.5 });
+  const iceM = CTX.toon('#cfe9f2'), seatM = CTX.toon('#5f7d8a', { side: T.DoubleSide });
+  const glowM = CTX.toon('#f3e8c8', { emissive:'#e3cd8d', emissiveIntensity:0.35 });
   const ov = 1.12, ovalize = m => (m.scale.x = ov, m);
+  const GAP = 0.55;                                       // entrance arc centred on +Z
   A(ovalize(CTX.cyl(2.10, 2.20, 0.25, baseM, 0, 0.125, 0, 20)));
-  A(ovalize(CTX.cyl(1.85, 1.90, 1.35, drumM, 0, 0.925, 0, 20)));
+  // C-shaped drum: a real opening faces the street
+  const drum = CTX.mesh(CTX.faceted(new T.CylinderGeometry(1.85, 1.90, 1.35, 20, 1, true, GAP, Math.PI*2 - GAP*2)), drumM, 0, 0.925, 0);
+  ovalize(drum); A(drum);
   const topY = 1.60;
-  A(ovalize(CTX.cyl(1.88, 1.88, 0.16, bandM, 0, 0.60, 0, 20)));
   A(ovalize(CTX.cyl(1.90, 1.90, 0.18, bandM, 0, 1.50, 0, 20)));
-  A(ovalize(CTX.cyl(1.89, 1.89, 0.16, signM, 0, 1.20, 0, 20)));
-  for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2; const x = Math.cos(a) * 1.9 * ov, z = Math.sin(a) * 1.9;
+  for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2; if (Math.abs(a - Math.PI/2) < GAP + 0.15) continue;
+    const x = Math.cos(a) * 1.9 * ov, z = Math.sin(a) * 1.9;
     const s = CTX.box(0.12, 0.7, 0.05, i % 2 ? signM : bandM, x, 0.95, z); s.rotation.y = Math.PI/2 - a; A(s); }
   A(ovalize(CTX.cyl(1.92, 1.92, 0.12, bandM, 0, topY, 0, 20)));
-  const dome = CTX.mesh(CTX.faceted(new T.SphereGeometry(1.90, 18, 10)), domeM, 0, topY, 0); dome.scale.set(ov, 0.32, 1.0); A(dome);
-  A(CTX.sph(0.12, signM, 0, 2.30, 0, 10));
-  A(CTX.box(1.8, 0.12, 0.6, bandM, 0, 1.42, 1.90)); A(CTX.box(1.5, 0.34, 0.10, signM, 0, 1.43, 1.92)); A(CTX.box(1.3, 1.25, 0.12, darkM, 0, 0.76, 1.88));
+  // flatter cap (top half only, so inside you look up into the bowl)
+  const dome = CTX.mesh(CTX.faceted(new T.SphereGeometry(1.90, 18, 9, 0, Math.PI*2, 0, Math.PI/2)), domeM, 0, topY, 0); dome.scale.set(ov, 0.26, 1.0); A(dome);
+  A(CTX.sph(0.12, signM, 0, 2.15, 0, 10));
+  // entrance canopy + jambs (the doorway itself stays open)
+  A(CTX.box(1.8, 0.12, 0.6, bandM, 0, 1.42, 1.90));
+  A(CTX.box(0.16, 1.3, 0.16, bandM, -1.05, 0.78, 1.83)); A(CTX.box(0.16, 1.3, 0.16, bandM, 1.05, 0.78, 1.83));
+  A(CTX.box(1.5, 0.34, 0.10, signM, 0, 1.43, 1.92));
+  // the huge corner LED screen wrapping the front-east curve
+  const led = CTX.mesh(CTX.faceted(new T.CylinderGeometry(1.97, 1.97, 0.9, 8, 1, true, Math.PI*0.72, 0.55)), ledM, 0, 1.0, 0);
+  ovalize(led); A(led);
+  // inside: rink, stage, seat ring
+  A(ovalize(CTX.cyl(1.72, 1.72, 0.045, baseM, 0, 0.17, 0, 20)));
+  const rink = CTX.cyl(1.05, 1.05, 0.035, iceM, 0, 0.20, 0.15, 18); rink.scale.x = 1.25; A(rink);
+  A(CTX.box(1.5, 0.35, 0.6, darkM, 0, 0.33, -1.35));                       // stage block
+  A(CTX.box(1.35, 0.8, 0.06, glowM, 0, 0.95, -1.62));                      // lit backdrop
+  const seats = CTX.mesh(CTX.faceted(new T.CylinderGeometry(1.80, 1.62, 0.5, 20, 1, true, GAP + 0.25, Math.PI*2 - (GAP + 0.25)*2)), seatM, 0, 0.45, 0);
+  ovalize(seats); A(seats);
+  // low ice-rink annex wing beside the drum
+  A(CTX.box(1.5, 0.75, 1.15, drumM, 2.65, 0.5, -0.55));
+  A(CTX.box(1.6, 0.10, 1.25, bandM, 2.65, 0.92, -0.55));
+  A(CTX.box(1.3, 0.35, 0.06, ledM, 2.65, 0.55, 0.04));
   return g;
 }
 
@@ -1095,7 +1183,7 @@ function buildFerrisWheel(CTX){
     CTX.toon('#3A86FF',{emissive:'#3A86FF',emissiveIntensity:0.45}),
     CTX.toon('#C77DFF',{emissive:'#C77DFF',emissiveIntensity:0.45})
   ];
-  const rimMat = rainbow[0];
+  const rimMat = CTX.toon('#F0F3F5');   // the real wheel's frame is white steel — rainbow lives on the cabins
   // Miramar mall podium: banded shopping-centre block instead of a bare crate —
   // glass ribbons each floor, recessed entrance, roof parapet, one neon fascia strip
   const glassRib = CTX.toon('#7FB2C2'), doorMat = CTX.toon('#31424C'), trimMat = CTX.toon('#D8D4CA');
@@ -1132,7 +1220,7 @@ function buildFerrisWheel(CTX){
   const N = 16;
   for (let i = 0; i < N; i++){
     const a = i / N * Math.PI * 2; const px = Math.cos(a) * R, py = Math.sin(a) * R;
-    const sp = CTX.box(0.05, R, 0.05, rainbow[i % rainbow.length], Math.cos(a) * R / 2, Math.sin(a) * R / 2, 0); sp.rotation.z = a - Math.PI / 2; wheel.add(sp);
+    const sp = CTX.box(0.05, R, 0.05, steelMat, Math.cos(a) * R / 2, Math.sin(a) * R / 2, 0); sp.rotation.z = a - Math.PI / 2; wheel.add(sp);
     const cab = CTX.group();
     cab.add(CTX.box(0.42, 0.44, 0.32, cabBody, 0, 0, 0));
     cab.add(CTX.box(0.44, 0.16, 0.34, glassMat, 0, 0.04, 0));

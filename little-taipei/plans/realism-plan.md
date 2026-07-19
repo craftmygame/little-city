@@ -141,6 +141,24 @@ Run at every phase end (and after any layout change big enough to doubt):
 - Runway block-void enforced in buildCityBlocks (0.36 km clear of the strip);
   terminal is a normal landmark (`songshan-terminal`, terrainPin).
 
+### Phase 4 decisions
+
+- All 18 audits done (compiled in `plans/checks/2026-07-19/audit-worklist.md`)
+  and ALL flagged fixes implemented the same night, biggest-first.
+- **Observatory deck sits ABOVE the crown** (local y≈25.9), the spire passing
+  through it like the real 91F outdoor deck — a deck at the band height
+  collided with the crown volume. The tuned-mass damper lives ON the deck
+  (stylized; the real one hangs at 87-92F inside).
+- Main Station signage is a red nameplate, not calligraphy — bakeMerge drops
+  UVs, so canvas-texture lettering needs the unmerged-model exception the
+  Xiangshan panel uses. Left for a polish pass.
+- Longshan/Presidential interiors: opened via cols only (their builders
+  already model doorways); a dedicated interior-dressing pass would still
+  help. Shilin's second lane is visual-only (no stall colliders).
+- Ground rules said never deploy, so the CLAUDE.md deploy-verify step of the
+  Phase 4 acceptance was intentionally skipped; everything was verified on
+  localhost instead (screenshots in plans/checks/2026-07-19/).
+
 ## Phases
 
 1. Tooling — geo-truth fetch, drift report, SVG preview.

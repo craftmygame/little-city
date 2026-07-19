@@ -1,7 +1,11 @@
 // ---------------------------------------------------------------------
-//  NIGHT MARKET (Raohe/Shilin) — self-illuminating emissive lane
+//  NIGHT MARKETS — self-illuminating emissive lanes.
+//  One core builder, two real markets: Raohe is ONE straight lane between
+//  two paifang gates beside Ciyou Temple (the default/reference layout);
+//  Shilin has no ceremonial gates but sprawls wider, with the red-brick
+//  main food-court building where Raohe keeps its temple.
 // ---------------------------------------------------------------------
-function buildNightMarket(CTX) {
+function _marketCore(CTX, opts) {
   const g = CTX.group();
   const matRed = CTX.toon('#B41E1E'), matBeam = CTX.toon('#8E1818'), matStone = CTX.toon('#3A3A42');
   const matRoofGreen = CTX.toon('#2E8B57'), matRoofGold = CTX.toon('#E0B33A'), matRoofBlue = CTX.toon('#2A6BB0');
@@ -122,12 +126,41 @@ function buildNightMarket(CTX) {
     Tg.rotation.y=Math.PI/2;                 // temple door faces the market aisle
     return Tg;
   }
-  // Centre the market on its origin. Both ends stay open and the temple sits to
-  // the side, so the central 2-unit aisle is a real through-route.
-  const frontGate=buildGate(); frontGate.position.z=4.35; g.add(frontGate);
-  const rearGate=buildGate(); rearGate.scale.setScalar(0.72); rearGate.position.z=-4.35; rearGate.rotation.y=Math.PI; g.add(rearGate);
-  g.add(buildStalls()); g.add(buildLanterns()); g.add(buildTemple());
+  function buildBrickHall() {
+    // Shilin's red-brick main market building, arcade facing the aisle
+    const brick = CTX.toon('#8E3B2F'), brickD = CTX.toon('#6E2C22');
+    const trimW = CTX.toon('#E4DCC8'), roofS = CTX.toon('#6E7178');
+    const B = CTX.group();
+    B.add(CTX.box(3.4, 0.2, 2.0, matStone, 0, 0.1, 0));
+    B.add(CTX.box(3.0, 1.7, 1.6, brick, 0, 1.05, 0));
+    for (const by of [0.75, 1.45]) B.add(CTX.box(3.06, 0.1, 1.66, trimW, 0, by, 0));
+    for (const dx of [-1.0, 0, 1.0]) B.add(CTX.box(0.62, 1.1, 0.1, matDoor, dx, 0.72, -0.82));
+    for (const dx of [-1.15, -0.45, 0.45, 1.15]) B.add(CTX.box(0.34, 0.4, 0.08, trimW, dx, 1.62, -0.82));
+    const rf = CTX.box(3.4, 0.14, 2.0, roofS, 0, 2.0, 0); rf.rotation.x = 0.06; B.add(rf);
+    B.add(CTX.box(3.5, 0.1, 0.3, brickD, 0, 1.95, -0.9));
+    B.position.set(4.1, 0, -2.35); B.rotation.y = Math.PI / 2;
+    return B;
+  }
+  // Centre the market on its origin. Both ends stay open and the side block
+  // (temple or brick hall) sits clear, so the aisle is a real through-route.
+  if (opts.gates) {
+    const frontGate = buildGate(); frontGate.position.z = 4.35; g.add(frontGate);
+    const rearGate = buildGate(); rearGate.scale.setScalar(0.72); rearGate.position.z = -4.35; rearGate.rotation.y = Math.PI; g.add(rearGate);
+  }
+  g.add(buildStalls()); g.add(buildLanterns());
+  if (opts.temple) g.add(buildTemple());
+  if (opts.brickHall) g.add(buildBrickHall());
+  if (opts.extraLane) {
+    // Shilin sprawls: a second, dimmer stall lane parallel to the first
+    const lane2 = CTX.group(); lane2.add(buildStalls()); lane2.add(buildLanterns());
+    lane2.position.set(-3.3, 0, 0.4); lane2.scale.setScalar(0.9); g.add(lane2);
+  }
   return g;
 }
 
-export { buildNightMarket };
+function buildRaoheMarket(CTX) { return _marketCore(CTX, { gates: true, temple: true }); }
+function buildShilinMarket(CTX) { return _marketCore(CTX, { brickHall: true, extraLane: true }); }
+// legacy alias (older saves/data)
+function buildNightMarket(CTX) { return _marketCore(CTX, { gates: true, temple: true }); }
+
+export { buildNightMarket, buildRaoheMarket, buildShilinMarket };
