@@ -224,8 +224,10 @@ function buildCKSComplex(CTX) {
   g.add(CTX.box(2.8,0.035,11.2,paver,0,0.018,0.25));
   g.add(CTX.box(11.8,0.028,3.2,paver2,0,0.014,0));
 
-  // CKS main hall (back)
+  // CKS main hall (back) — on a tiered white platform like the real monument
   const hall = CTX.group();
+  hall.add(CTX.box(6.4,0.14,6.4,whiteBase,0,-0.07,0));   // lowest terrace (decorative, thin)
+  hall.add(CTX.box(5.7,0.12,5.7,whiteBase,0,0.02,0));
   hall.add(CTX.box(5.0,0.08,5.0,whiteBase,0,0.04,0));
   const pedTop = 0.08;
   hall.add(CTX.box(0.22,2.2,4.5,marble,-2.14,pedTop+1.1,0));
@@ -234,6 +236,12 @@ function buildCKSComplex(CTX) {
   hall.add(CTX.box(1.5,2.2,0.22,marble,-1.5,pedTop+1.1,2.14));
   hall.add(CTX.box(1.5,2.2,0.22,marble, 1.5,pedTop+1.1,2.14));
   hall.add(CTX.box(3.8,1.7,0.05,cream,0,0.94,-2.00));                 // softly lit inner wall
+  // the bronze CKS statue on its dais — the chamber's visual anchor
+  const bronze = CTX.toon('#8C7853');
+  hall.add(CTX.box(1.35,0.38,1.05,marble,0,0.19,-1.55));
+  hall.add(CTX.box(0.85,0.40,0.85,bronze,0,0.58,-1.50));              // seat/legs
+  hall.add(CTX.box(0.78,0.85,0.55,bronze,0,1.18,-1.62));              // torso
+  hall.add(CTX.sph(0.27,bronze,0,1.80,-1.62,10));                     // head
   hall.add(CTX.box(4.7, 0.1, 4.7, goldGrn, 0, pedTop + 2.15, 0));
   const cubeTop = pedTop + 2.2;
   // Open memorial threshold: jambs and lintel frame a true 1.3 x 2.0 passage.
@@ -242,10 +250,15 @@ function buildCKSComplex(CTX) {
   hall.add(CTX.box(1.58,0.16,0.18,red,0,2.03,2.27));
   hall.add(CTX.box(0.08,1.98,0.14,gold,-0.83,1.02,2.31));
   hall.add(CTX.box(0.08,1.98,0.14,gold, 0.83,1.02,2.31));
+  // twin stair flights descending from the chamber door to the square —
+  // the real 89-step read: two parallel runs with a centre gap, each row
+  // dropping as it fans out
   const N = 6;
   for (let i = 0; i < N; i++) {
     const t = i / (N - 1);
-    hall.add(CTX.box(2.0+t*2.2,0.08,0.28,marble,0,0.04,2.38+t*1.55));
+    const w = 0.95 + t * 1.0, ox = 0.72 + t * 0.58, y = 0.05 + (1 - t) * 0.11;
+    hall.add(CTX.box(w,0.08,0.28,marble,-ox,y,2.38+t*1.55));
+    hall.add(CTX.box(w,0.08,0.28,marble, ox,y,2.38+t*1.55));
   }
   const oct = CTX.group();
   function octa(rT, rB, h, mat, y) { const m = CTX.cyl(rT, rB, h, mat, 0, y, 0, 8); m.rotation.y = PI / 8; oct.add(m); return m; }
@@ -282,6 +295,7 @@ function buildCKSComplex(CTX) {
   }
   gate.add(CTX.box(8.7, 0.45, 0.80, cream, 0, 3.25, 0));
   gate.add(CTX.box(8.7, 0.16, 0.86, goldGrn, 0, 2.97, 0));
+  gate.add(CTX.box(2.6, 0.38, 0.10, gold, 0, 3.25, 0.44));   // 自由廣場 inscription tablet
   gate.add(sweptRoof(2.3, 1.5, 1.1, cobalt, 3.52, goldGrn));
   let rl, rr;
   rl = sweptRoof(1.7, 1.35, 0.85, cobalt, 3.48, goldGrn); rl.position.x = -1.95; gate.add(rl);
@@ -654,9 +668,13 @@ function buildPresidentialOffice(CTX){
 }
 
 function buildMainStation(CTX){
+  // Cream walls + the huge terracotta hip roof (the real station's defining
+  // read), hollowed into a walk-in concourse: door arches on all four faces,
+  // thin checkered floor near y=0 (the famous hall where everyone sits).
   const g = CTX.group();
-  const brick = CTX.toon('#9C5B43'), trim = CTX.toon('#C9A07E'), roofG = CTX.toon('#2F7D5B');
-  const ridge = CTX.toon('#245E45'), glw = CTX.toon('#6E8794'), base = CTX.toon('#8E8C86');
+  const brick = CTX.toon('#E8E0CB'), trim = CTX.toon('#CDBFA0'), roofG = CTX.toon('#B5482E');
+  const ridge = CTX.toon('#7A2E1F'), glw = CTX.toon('#6E8794'), base = CTX.toon('#8E8C86');
+  const tileD = CTX.toon('#3A3D42'), tileL = CTX.toon('#EDE9E0');
   const k = Math.SQRT1_2;
   function mkWin(x, y, z, ry){
     const w = CTX.group();
@@ -668,17 +686,50 @@ function buildMainStation(CTX){
     const p = CTX.group(); p.position.set(cx, 3.18, cz); p.rotation.y = Math.atan2(-cz, cx);
     const arm = CTX.box(1.50, 0.16, 0.50, ridge, 0.65, 0, 0); arm.rotation.z = 0.52; p.add(arm); return p;
   }
-  g.add(CTX.box(5.60, 0.50, 4.60, base, 0, 0.25, 0));
-  g.add(CTX.box(6.00, 2.60, 5.00, brick, 0, 1.80, 0));
-  [0.70, 1.70, 2.95].forEach(by => g.add(CTX.box(6.12, 0.16, 5.12, trim, 0, by, 0)));
+  // arch door assembly, reused on every face (built facing +Z, then rotated)
+  function arch(z, ry){
+    const a = CTX.group();
+    a.add(CTX.box(0.20, 1.95, 0.10, trim, -0.66, 1.475, 0));   // jambs — the doorway itself stays open
+    a.add(CTX.box(0.20, 1.95, 0.10, trim,  0.66, 1.475, 0));
+    const aT = CTX.cyl(0.75, 0.75, 0.08, trim, 0, 2.45, 0, 14); aT.rotation.x = Math.PI/2; a.add(aT);
+    const aO = CTX.cyl(0.58, 0.58, 0.20, glw, 0, 2.45, 0.04, 14); aO.rotation.x = Math.PI/2; a.add(aO);
+    a.add(CTX.box(1.15, 0.45, 0.20, glw, 0, 2.05, 0.04));   // glazed transom above the open door
+    a.position.set(0, 0, z);
+    const holder = CTX.group(); holder.add(a); holder.rotation.y = ry;
+    return holder;
+  }
+  g.add(CTX.box(6.40, 0.14, 5.40, base, 0, 0.07, 0));                  // thin apron plinth
+  g.add(CTX.box(5.70, 0.10, 4.70, tileL, 0, 0.09, 0));                 // concourse floor
+  for(let ix=0; ix<8; ix++) for(let iz=0; iz<6; iz++)
+    if((ix+iz)%2===0) g.add(CTX.box(0.60,0.024,0.60,tileD,-2.28+ix*0.65,0.145,-1.70+iz*0.68));
+  // shell walls: cream, with a real door gap in every face
+  for(const s of [1,-1]){
+    g.add(CTX.box(2.25,2.60,0.22,brick,-1.875,1.80,s*2.50));           // front/back segments
+    g.add(CTX.box(2.25,2.60,0.22,brick, 1.875,1.80,s*2.50));
+    g.add(CTX.box(1.52,0.70,0.22,brick, 0,2.75,s*2.50));               // header over the door
+    g.add(CTX.box(0.22,2.60,1.85,brick, s*2.89,1.80,-1.575));          // side walls
+    g.add(CTX.box(0.22,2.60,1.85,brick, s*2.89,1.80, 1.575));
+    g.add(CTX.box(0.22,0.70,1.32,brick, s*2.89,2.75,0));
+  }
+  // cornice frames (edge strips only — the interior stays open)
+  for(const by of [0.70, 2.95]){
+    for(const s of [1,-1]){
+      g.add(CTX.box(6.12,0.16,0.18,trim,0,by,s*2.51));
+      g.add(CTX.box(0.18,0.16,5.12,trim,s*2.97,by,0));
+    }
+  }
   const rows = [1.20, 2.35];
   [-2.30, -1.45, 1.45, 2.30].forEach(x => rows.forEach(y => mkWin(x, y, 2.53, 0)));
-  [-2.30, -1.45, -0.55, 0.55, 1.45, 2.30].forEach(x => rows.forEach(y => mkWin(x, y, -2.53, Math.PI)));
-  [-3.03, 3.03].forEach(sx => [-1.70, -0.85, 0, 0.85, 1.70].forEach(z => rows.forEach(y => mkWin(sx, y, z, sx > 0 ? Math.PI/2 : -Math.PI/2))));
-  g.add(CTX.box(1.50, 1.95, 0.08, trim, 0, 1.475, 2.50));
-  const aT = CTX.cyl(0.75, 0.75, 0.08, trim, 0, 2.45, 2.50, 14); aT.rotation.x = Math.PI/2; g.add(aT);
-  g.add(CTX.box(1.15, 1.85, 0.20, glw, 0, 1.45, 2.54));
-  const aO = CTX.cyl(0.58, 0.58, 0.20, glw, 0, 2.45, 2.54, 14); aO.rotation.x = Math.PI/2; g.add(aO);
+  [-2.30, -1.45, 1.45, 2.30].forEach(x => rows.forEach(y => mkWin(x, y, -2.53, Math.PI)));
+  [-3.03, 3.03].forEach(sx => [-1.70, -0.85, 0.85, 1.70].forEach(z => rows.forEach(y => mkWin(sx, y, z, sx > 0 ? Math.PI/2 : -Math.PI/2))));
+  g.add(arch(2.54, 0)); g.add(arch(2.54, Math.PI));
+  g.add(arch(2.94, Math.PI/2)); g.add(arch(2.94, -Math.PI/2));
+  // clock over the main entrance + a red nameplate (station sign)
+  const clk = CTX.cyl(0.30, 0.30, 0.07, tileL, 0, 2.90, 2.56, 14); clk.rotation.x = Math.PI/2; g.add(clk);
+  g.add(CTX.box(0.05, 0.22, 0.03, tileD, 0, 2.94, 2.60));
+  g.add(CTX.box(0.16, 0.05, 0.03, tileD, 0.06, 2.88, 2.60));
+  g.add(CTX.box(1.30, 0.34, 0.07, CTX.toon('#B03A2E'), 0, 3.02, 3.40));
+  // steps to the front door
   g.add(CTX.box(1.90, 0.22, 0.50, base, 0, 0.60, 2.72));
   g.add(CTX.box(1.55, 0.22, 0.35, base, 0, 0.77, 2.82));
   g.add(CTX.box(7.70, 0.20, 0.14, ridge, 0, 3.15, 3.35));
@@ -839,6 +890,23 @@ function buildTaipeiDome(CTX){
   oval(bowl2); A(bowl2);
   const ring = CTX.mesh(CTX.faceted(new T.CylinderGeometry(2.4, 2.4, 0.09, 24, 1, true)), halo, 0, 2.56, 0);
   oval(ring); A(ring);                                                      // floodlight halo over the field
+  // chalk foul lines from home plate + a low outfield wall between field
+  // and stands (audit: the diamond needs its lines to read)
+  for (const s of [-1, 1]){
+    const fl = CTX.box(0.05, 0.03, 2.35, chalk, s*0.83, 0.23, 0.83); fl.rotation.y = s*Math.PI/4; A(fl);
+  }
+  const fence = CTX.mesh(CTX.faceted(new T.CylinderGeometry(2.62, 2.62, 0.22, 24, 1, true, GAP + 0.3, Math.PI*2 - (GAP + 0.3)*2)), seatD, 0, 0.30, 0);
+  oval(fence); A(fence);
+  // the towers of the real complex — glazed hotel + office slabs rising
+  // beside the saucer (its dominant skyline read); tucked at the back-left
+  // so the entrance stays open
+  const towGlass = CTX.toon('#4a5a66'), towTrim = CTX.toon('#c9ccd0');
+  A(CTX.box(1.55, 4.6, 1.35, towGlass, -3.45, 2.35, -1.7));
+  A(CTX.box(1.65, 0.14, 1.45, towTrim, -3.45, 4.70, -1.7));
+  A(CTX.box(1.3, 3.6, 1.2, towGlass, -2.4, 1.85, -3.05));
+  A(CTX.box(1.4, 0.12, 1.3, towTrim, -2.4, 3.70, -3.05));
+  for(const ty of [1.2, 2.2, 3.2, 4.2]) A(CTX.box(1.6, 0.06, 1.4, towTrim, -3.45, ty, -1.7));
+  for(const ty of [1.0, 1.9, 2.8]) A(CTX.box(1.35, 0.06, 1.25, towTrim, -2.4, ty, -3.05));
   // arcade tree row along the front, clear of the doorway (street view)
   for (const tx of [-3.1, -2.0, 2.0, 3.1]){
     A(CTX.cyl(0.05, 0.07, 0.75, trunkM, tx, 0.38, 3.62, 6));

@@ -365,10 +365,16 @@ export const TAIPEI_CITY = {
     { id: 'cks-memorial', name: 'CKS Memorial Hall', builder: 'buildCKSComplex', at: [-4.305, 0.104], placement: { foot: 9.2, scale: 0.95, cols: [
       {x:-2.14,z:-6.2,r:.5},{x:-2.14,z:-5,r:.5},{x:-2.14,z:-3.8,r:.5},{x:2.14,z:-6.2,r:.5},{x:2.14,z:-5,r:.5},{x:2.14,z:-3.8,r:.5},
       {x:-1.6,z:-7.14,r:.5},{x:-.5,z:-7.14,r:.5},{x:.5,z:-7.14,r:.5},{x:1.6,z:-7.14,r:.5},{x:-1.5,z:-2.86,r:.7},{x:1.5,z:-2.86,r:.7},
+      {x:0,z:-6.55,r:.8},
       {x:-6,z:0,r:1.8},{x:6,z:0,r:1.8},{x:-3.7,z:6,r:.34},{x:-2.25,z:6,r:.34},{x:-1.18,z:6,r:.28},{x:1.18,z:6,r:.28},{x:2.25,z:6,r:.34},{x:3.7,z:6,r:.34}
     ], claim: 5.0, extra: -0.12, labelY: 10, face: -90, base: '#e7e2d5' } },
     { id: 'presidential-office', name: 'Presidential Office', builder: 'buildPresidentialOffice', at: [-5.298, 0.696], placement: { foot: 4.6, cols: [{x:-3,z:0,r:2.1},{x:0,z:0,r:2.1},{x:3,z:0,r:2.1}], claim: 2.4, extra: -0.15, labelY: 7.5, face: -90, base: '#d8d2c4' } },
-    { id: 'main-station', name: 'Taipei Main Station', builder: 'buildMainStation', at: [-4.779, 1.55], placement: { foot: 4.0, ar: 3.5, claim: 2.4, extra: -0.15, labelY: 6, base: '#cfcabe' } },
+    // Walk-in concourse: cols trace the shell walls; all four door gaps open.
+    { id: 'main-station', name: 'Taipei Main Station', builder: 'buildMainStation', at: [-4.779, 1.55], placement: { foot: 4.0, cols: [
+      {x:-1.9,z:2.5,r:.6},{x:1.9,z:2.5,r:.6},{x:-1.9,z:-2.5,r:.6},{x:1.9,z:-2.5,r:.6},
+      {x:-2.89,z:1.6,r:.55},{x:-2.89,z:-1.6,r:.55},{x:2.89,z:1.6,r:.55},{x:2.89,z:-1.6,r:.55},
+      {x:-2.75,z:2.35,r:.5},{x:2.75,z:2.35,r:.5},{x:-2.75,z:-2.35,r:.5},{x:2.75,z:-2.35,r:.5}
+    ], claim: 2.4, extra: -0.15, labelY: 6, base: '#cfcabe' } },
     { id: 'longshan-temple', name: 'Longshan Temple', builder: 'buildLongshanTemple', at: [-6.518, 0.395], placement: { scale: 1.1, foot: 4.0, cols: [{x:0,z:2.2,r:2.3},{x:0,z:0,r:2.2},{x:0,z:-2.3,r:2.2},{x:-2.7,z:1.65,r:1.0},{x:-2.7,z:-1.65,r:1.0},{x:2.7,z:1.65,r:1.0},{x:2.7,z:-1.65,r:1.0}], claim: 2.0, extra: -0.10, labelY: 5.1, base: '#cdbfa1' } },
     { id: 'baoan-temple', name: 'Bao’an Temple', builder: 'buildBaoanTemple', at: [-4.937, 4.356], placement: { foot: 2.6, cols: [{x:0,z:1.35,r:1.5},{x:0,z:-0.55,r:1.8}], claim: 1.7, extra: -0.10, labelY: 4, base: '#cdbfa1' } },
     { id: 'grand-hotel', name: 'Grand Hotel', builder: 'buildGrandHotel', at: [-3.844, 4.979], placement: { scale: 1.35, foot: 7.3, cols: [{x:-4.7,z:0,r:2.7},{x:0,z:0,r:3.2},{x:4.7,z:0,r:2.7}], claim: 3.8, extra: -0.20, labelY: 9.5, base: '#daccb4' } },
