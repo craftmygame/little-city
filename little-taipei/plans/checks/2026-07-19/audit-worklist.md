@@ -1,5 +1,11 @@
 # Phase 4 landmark audit — compiled worklist (2026-07-19 overnight run)
 
+**STATUS: all flagged fixes below were implemented the same night** (commits
+b449d7e, ac7f7ca, dff7046). Known leftovers: Main Station signage is a red
+nameplate (canvas lettering needs an unmerged model), Longshan/Presidential
+would benefit from an interior-dressing pass, Shilin's second lane has no
+stall colliders.
+
 ## presidential-office
 
 1. Silhouette — PASS  2. Colors — PASS
