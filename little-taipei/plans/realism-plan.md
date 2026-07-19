@@ -85,6 +85,42 @@ Run at every phase end (and after any layout change big enough to doubt):
 5. SVG overlays from `node scripts/map-preview.mjs --out plans/checks/<date>`
    are the precise backbone; the browser pass is for feel and recognition.
 
+## Overnight run log — 2026-07-19/20 (judgment calls)
+
+- **Phase 4 audit ran early** (during Phase 1's Overpass waits): the 18-landmark
+  rubric audit is independent of Phases 1–3, so its agents ran in parallel;
+  compiled worklist in `plans/checks/2026-07-19/audit-worklist.md`.
+- **Overpass strategy**: per-feature queries hit rate limits and 45 s timeouts;
+  switched to 3–4 bulk queries + local matching. Same-named roads in other
+  districts (信義路 in Xindian, 中山北路 in Tamsui…) needed per-road bboxes in
+  the manifest. `--roads-only` flag refreshes road features alone.
+- **Phase 2 spread retune**: exact preservation of today's rendering is
+  mathematically impossible — the old map double-booked a ring (the inflated
+  window edge rendered at the same radius as already-real Raohe/Arena), so a
+  faithful transform would fold the map. Chose a `boost` stage on spreadDist:
+  slope 3.61 to 0.55 real km (street window renders at today's scale), dip to
+  0.74 through 1.15–1.8 km, rejoining the classic curve at 2.4 km with zero
+  net offset — everything beyond 2.4 km renders bit-identically to before.
+  Core landmarks shift ≤ ~0.6 km rendered (their old data was individually
+  sloppy: City Hall ×2.58, Hyatt ×4.08); declump absorbs footprint overlaps.
+- **Xiangshan**: whole Four-Beasts ensemble (mountains, graded sites, trail,
+  parks, pond, approach ribbon) translated rigidly onto the true 象山 peak
+  (delta [-0.186, +0.808]); tiger-mountain snapped to its own geo-truth peak.
+  The pond went to the trailhead flat (real slopes have none).
+- **Zone C ranges**: kept compressed distances, normalized bearings to the
+  true peaks (Qixingshan is due N, not NE); drift check tests bearing (≤10°)
+  for zone C instead of km.
+- **Spawn sightline**: real Ren'ai geometry aims the street wedge away from
+  101, so a second protected wedge (spawn → 101, half 0.34 km) now keeps
+  procedural blocks out of the tower sightline. Verified in-game.
+- **Rivers**: adopted OSM centrelines (fixes two real errors: old Tamsui ran
+  ~1.7 km too far west, old Keelung entered from the SOUTH-east at y=-1.5
+  instead of NE at y=+2). DP-simplification cuts some meander corners —
+  Phase 3's overlay pass refines.
+- **Shops** inside the old inflated window divided by ~1.9; others untouched.
+- Red MRT line now terminates at the real Xiangshan station instead of
+  running into the mountain foot.
+
 ## Phases
 
 1. Tooling — geo-truth fetch, drift report, SVG preview.

@@ -177,14 +177,32 @@ function polyDist(px,py, pts){ let m=1e9; for(let i=0;i<pts.length-1;i++){ const
 // through SP_A0..SP_A1 so the outer ranges + sea land just before the far pole.
 // Applied ONCE to authored layout data (landmark/district/river/road positions);
 // local sizes — road widths, park radii, the street fabric — stay physical.
-const { factor:SPREAD, innerKm:SP_A0, outerKm:SP_A1, farFactor:SP_OUT } = CITY.planet.spread;
+const { factor:SPREAD, innerKm:SP_A0, outerKm:SP_A1, farFactor:SP_OUT, boost:SP_BOOST } = CITY.planet.spread;
+// Optional inner boost (Phase 2 normalization): city data is now true real km,
+// so the extra ×~1.9 the Xinyi core used to carry in its data lives here
+// instead. The boost integrates a slope profile s0 → dip → base across
+// z[0..3] real km whose total extra area is ZERO at z[3] — beyond it the
+// spread is bit-identical to the pre-normalization curve.
+function boostExtra(d){
+  if(!SP_BOOST) return 0;
+  const {s0, z:[z1,z2,z3,z4], dip}=SP_BOOST, base=SPREAD;
+  const S=u=>u*u*u-u*u*u*u*0.5;                       // ∫ smoothstep
+  const e1=s0-base, e2=dip-base;
+  let E=0, t=Math.min(d,z1); E+=e1*t;
+  if(d>z1){ const L=z2-z1,u=Math.min((d-z1)/L,1); E+=e1*L*u+(e2-e1)*L*S(u); }
+  if(d>z2){ E+=e2*(Math.min(d,z3)-z2); }
+  if(d>z3){ const L=z4-z3,u=Math.min((d-z3)/L,1); E+=e2*L*u+(0-e2)*L*S(u); }
+  return E;
+}
+const BOOST_TAIL = SP_BOOST ? boostExtra(SP_BOOST.z[3]) : 0;   // force exact 0 past z4
 function spreadDist(d){
   const L=SP_A1-SP_A0;
   let G;                                              // ∫₀^d smoothstep((t-SP_A0)/L) dt
   if(d<=SP_A0) G=0;
   else if(d<SP_A1){ const u=(d-SP_A0)/L; G=L*(u*u*u - u*u*u*u*0.5); }
   else G=L*0.5 + (d-SP_A1);
-  return Math.min(SPREAD*d + (SP_OUT-SPREAD)*G, 17.9);
+  const boost = SP_BOOST && d < SP_BOOST.z[3] ? boostExtra(d) - BOOST_TAIL*(d/SP_BOOST.z[3]) : 0;
+  return Math.min(SPREAD*d + (SP_OUT-SPREAD)*G + boost, 17.9);
 }
 function warpKm(x,y){ const d=Math.hypot(x,y); if(d<1e-6) return {x:0,y:0}; const k=spreadDist(d)/d; return {x:x*k, y:y*k}; }
 function warpPts(pts){ return pts.map(([x,y])=>{ const w=warpKm(x,y); return [w.x,w.y]; }); }
@@ -1205,6 +1223,16 @@ function buildCityBlocks(){
     const along=dx*VISTA.tx+dy*VISTA.ty;
     if(along<0||along>VISTA.len) return false;
     return Math.abs(-dx*VISTA.ty+dy*VISTA.tx)<VISTA.half; };
+  // second protected wedge: spawn → Taipei 101 itself. Since Phase 2 the real
+  // Ren'ai geometry no longer points the street wedge anywhere near 101's
+  // bearing, so without this a procedural block can blot the tower out of the
+  // opening shot (the anchor CLAUDE.md protects).
+  const VISTA101=(()=>{ const dx=-SPAWN_KM.x, dy=-SPAWN_KM.y, L=Math.hypot(dx,dy)||1e-4;
+    return { tx:dx/L, ty:dy/L, len:Math.min(2.6,L), half:0.34 }; })();
+  const inVista101=(x,y)=>{ const dx=x-SPAWN_KM.x, dy=y-SPAWN_KM.y;
+    const along=dx*VISTA101.tx+dy*VISTA101.ty;
+    if(along<0.06||along>VISTA101.len) return false;
+    return Math.abs(-dx*VISTA101.ty+dy*VISTA101.tx)<VISTA101.half; };
   // Compact camera pocket BEHIND the spawn heading. The authored street camera is
   // ~5u back and no longer orbits, so the previous 9u-wide clearing was unnecessary.
   const inCamOrbit=(x,y)=>{ const dx=x-SPAWN_KM.x, dy=y-SPAWN_KM.y;
@@ -1257,7 +1285,8 @@ function buildCityBlocks(){
   for(let ci=0; ci<cand.length && placed<MAXB; ci++){
     { const {x,y,den,priority}=cand[ci];
       if(roadDist(x,y) < ROAD_CLEAR) continue;    // leave a camera-wide corridor along every avenue
-      if(inVista(x,y)) continue;                  // protect the spawn → 101 sightline
+      if(inVista(x,y)) continue;                  // protect the spawn street view
+      if(inVista101(x,y)) continue;               // …and the spawn → 101 sightline itself
       if(Math.hypot(x-SPAWN_KM.x,y-SPAWN_KM.y) < 0.30) continue;  // immediate player clearance only
       if(inCamOrbit(x,y)) continue;               // camera swing-room behind the spawn heading
       if(inPublicApproach(x,y)) continue;          // keep major public thresholds connected to their streets
@@ -1759,7 +1788,7 @@ function buildXiangshanTrail(){
   const unitsTo=(s,px,py)=>Math.hypot(px-s.x,py-s.y)*KM;
   // dirt shoulder under the flight + the short paved approach from Xinyi Rd
   surfaceRibbon(pts, 0.26, null, 0.03, {mat:toon('#a1977f'), subdiv:6});
-  surfaceRibbon(warpPts([[1.97,-0.84], trailDefinition.path[0]]), 0.11, null, 0.045, {mat:toon('#cfc8b6'), subdiv:4});
+  surfaceRibbon(warpPts([[1.784,-0.032], trailDefinition.path[0]]), 0.11, null, 0.045, {mat:toon('#cfc8b6'), subdiv:4});
   const treadGeo=faceted(new THREE.BoxGeometry(1.35,0.3,0.3));
   const treadMats=[toon('#b6b0a2'), toon('#a8a294')];
   const railMat=toon('#2e6e52');                     // the trail's green metal rails

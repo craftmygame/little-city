@@ -66,27 +66,27 @@ const FEATURES = [
   { id: 'guanyinshan', kind: 'point', zone: 'C', peak: true, names: ['觀音山', '硬漢嶺'], bbox: [25.10, 121.39, 25.16, 121.45] },
   { id: 'maokong', kind: 'point', zone: 'C', names: ['貓空站', '貓空'], bbox: [24.94, 121.55, 25.00, 121.60] },
   // ---- existing 15 game roads ----
-  { id: 'zhongxiao', kind: 'line', zone: 'B', regex: '^忠孝東路|^忠孝西路' },
-  { id: 'renai', kind: 'line', zone: 'B', regex: '^仁愛路' },
-  { id: 'xinyi-road', kind: 'line', zone: 'B', regex: '^信義路' },
-  { id: 'heping', kind: 'line', zone: 'B', regex: '^和平東路|^和平西路' },
-  { id: 'nanjing', kind: 'line', zone: 'B', regex: '^南京東路|^南京西路' },
-  { id: 'bade', kind: 'line', zone: 'B', regex: '^八德路' },
-  { id: 'zhongshan', kind: 'line', zone: 'B', regex: '^中山北路|^中山南路' },
-  { id: 'dunhua', kind: 'line', zone: 'B', regex: '^敦化北路|^敦化南路' },
-  { id: 'fuxing', kind: 'line', zone: 'B', regex: '^復興北路|^復興南路' },
+  { id: 'zhongxiao', kind: 'line', zone: 'B', regex: '^忠孝東路|^忠孝西路', bbox: [25.03, 121.49, 25.06, 121.65] },
+  { id: 'renai', kind: 'line', zone: 'B', regex: '^仁愛路', bbox: [25.03, 121.51, 25.045, 121.567] },
+  { id: 'xinyi-road', kind: 'line', zone: 'B', regex: '^信義路', bbox: [25.02, 121.505, 25.048, 121.585] },
+  { id: 'heping', kind: 'line', zone: 'B', regex: '^和平東路|^和平西路', bbox: [25.015, 121.49, 25.04, 121.575] },
+  { id: 'nanjing', kind: 'line', zone: 'B', regex: '^南京東路|^南京西路', bbox: [25.048, 121.51, 25.058, 121.58] },
+  { id: 'bade', kind: 'line', zone: 'B', regex: '^八德路', bbox: [25.04, 121.52, 25.06, 121.59] },
+  { id: 'zhongshan', kind: 'line', zone: 'B', regex: '^中山北路|^中山南路', bbox: [24.99, 121.508, 25.135, 121.535] },
+  { id: 'dunhua', kind: 'line', zone: 'B', regex: '^敦化北路|^敦化南路', bbox: [25.02, 121.54, 25.06, 121.56] },
+  { id: 'fuxing', kind: 'line', zone: 'B', regex: '^復興北路|^復興南路', bbox: [25.02, 121.53, 25.06, 121.555] },
   { id: 'zhonghua', kind: 'line', zone: 'B', regex: '^中華路', bbox: [25.02, 121.49, 25.06, 121.52] },
-  { id: 'keelung-road', kind: 'line', zone: 'B', regex: '^基隆路' },
-  { id: 'roosevelt', kind: 'line', zone: 'B', regex: '^羅斯福路' },
+  { id: 'keelung-road', kind: 'line', zone: 'B', regex: '^基隆路', bbox: [25.005, 121.52, 25.06, 121.585] },
+  { id: 'roosevelt', kind: 'line', zone: 'B', regex: '^羅斯福路', bbox: [24.99, 121.50, 25.035, 121.545] },
   { id: 'guangfu-south', kind: 'line', zone: 'B', regex: '^光復南路|^光復北路' },
   { id: 'songren', kind: 'line', zone: 'B', regex: '^松仁路' },
   { id: 'songshou', kind: 'line', zone: 'B', regex: '^松壽路' },
   // ---- full-grid arterials (Phase 3 targets) ----
-  { id: 'civic-blvd', kind: 'line', zone: 'B', regex: '^市民大道' },
-  { id: 'minquan', kind: 'line', zone: 'B', regex: '^民權東路|^民權西路' },
-  { id: 'minsheng', kind: 'line', zone: 'B', regex: '^民生東路|^民生西路' },
-  { id: 'xinsheng', kind: 'line', zone: 'B', regex: '^新生南路|^新生北路' },
-  { id: 'jianguo', kind: 'line', zone: 'B', regex: '^建國南路|^建國北路' },
+  { id: 'civic-blvd', kind: 'line', zone: 'B', regex: '^市民大道', bbox: [25.04, 121.50, 25.055, 121.575] },
+  { id: 'minquan', kind: 'line', zone: 'B', regex: '^民權東路|^民權西路', bbox: [25.058, 121.50, 25.072, 121.60] },
+  { id: 'minsheng', kind: 'line', zone: 'B', regex: '^民生東路|^民生西路', bbox: [25.055, 121.51, 25.065, 121.575] },
+  { id: 'xinsheng', kind: 'line', zone: 'B', regex: '^新生南路|^新生北路', bbox: [25.02, 121.52, 25.075, 121.54] },
+  { id: 'jianguo', kind: 'line', zone: 'B', regex: '^建國南路|^建國北路', bbox: [25.02, 121.53, 25.075, 121.545] },
   { id: 'chengde', kind: 'line', zone: 'B', regex: '^承德路' },
   { id: 'wenlin', kind: 'line', zone: 'B', regex: '^文林路', bbox: [25.08, 121.50, 25.14, 121.54] },
   { id: 'shipai', kind: 'line', zone: 'B', regex: '^石牌路', bbox: [25.10, 121.50, 25.13, 121.54] },
@@ -294,34 +294,48 @@ function matchLine(f, ways) {
 }
 
 // --- main ------------------------------------------------------------------
-const points = FEATURES.filter(f => f.kind === 'point');
-const roads = FEATURES.filter(f => f.kind === 'line' && !f.river && !f.bridge && !f.runway);
-const rivers = FEATURES.filter(f => f.river);
-const special = FEATURES.filter(f => f.bridge || f.runway);
+// --roads-only: refresh just the road features from one highways query and
+// carry every other feature over from the existing geo-truth.json.
+const ROADS_ONLY = process.argv.includes('--roads-only');
+const prevFeatures = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')).features : [];
+const prevById = new Map(prevFeatures.map(f => [f.id, f]));
 
-process.stderr.write('bulk query 1/4: named points…\n');
-const pointEls = await bulkPoints(points);
-process.stderr.write(`  ${pointEls.length} elements\n`);
-await sleep(1500);
-process.stderr.write('bulk query 2/4: major named highways…\n');
+const points = FEATURES.filter(f => f.kind === 'point');
+const isRoad = f => f.kind === 'line' && !f.river && !f.bridge && !f.runway;
+
+let pointEls = [], riverWays = [], specialWays = [];
+if (!ROADS_ONLY) {
+  process.stderr.write('bulk query 1/4: named points…\n');
+  pointEls = await bulkPoints(points);
+  process.stderr.write(`  ${pointEls.length} elements\n`);
+  await sleep(1500);
+}
+process.stderr.write('bulk query: major named highways…\n');
 const roadData = await overpass(`[out:json][timeout:180];way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"]["name"]${bboxStr(TAIPEI)};out geom;`, 200000);
 const roadWays = (roadData.elements || []).filter(w => w.geometry?.length);
 process.stderr.write(`  ${roadWays.length} ways\n`);
-await sleep(1500);
-process.stderr.write('bulk query 3/4: rivers…\n');
-const riverData = await overpass(`[out:json][timeout:90];way["waterway"="river"]["name"~"^(淡水河|新店溪|基隆河)$"]${bboxStr(TAIPEI)};out geom;`);
-const riverWays = (riverData.elements || []).filter(w => w.geometry?.length);
-process.stderr.write(`  ${riverWays.length} ways\n`);
-await sleep(1500);
-process.stderr.write('bulk query 4/4: bridges + runway…\n');
-const specialData = await overpass(`[out:json][timeout:90];(way["bridge"]["name"~"^(台北橋|臺北橋|忠孝橋|大直橋|民權大橋)$"]${bboxStr(TAIPEI)};way["aeroway"="runway"](25.06,121.53,25.08,121.57););out geom;`);
-const specialWays = (specialData.elements || []).filter(w => w.geometry?.length);
-process.stderr.write(`  ${specialWays.length} ways\n`);
+if (!ROADS_ONLY) {
+  await sleep(1500);
+  process.stderr.write('bulk query 3/4: rivers…\n');
+  const riverData = await overpass(`[out:json][timeout:90];way["waterway"="river"]["name"~"^(淡水河|新店溪|基隆河)$"]${bboxStr(TAIPEI)};out geom;`);
+  riverWays = (riverData.elements || []).filter(w => w.geometry?.length);
+  process.stderr.write(`  ${riverWays.length} ways\n`);
+  await sleep(1500);
+  process.stderr.write('bulk query 4/4: bridges + runway…\n');
+  const specialData = await overpass(`[out:json][timeout:90];(way["bridge"]["name"~"^(台北大橋|台北橋|臺北橋|忠孝橋|大直橋|民權大橋)$"]${bboxStr(TAIPEI)};way["aeroway"="runway"](25.06,121.53,25.08,121.57););out geom;`);
+  specialWays = (specialData.elements || []).filter(w => w.geometry?.length);
+  process.stderr.write(`  ${specialWays.length} ways\n`);
+}
 
 const results = [];
 const failures = [];
 for (const f of FEATURES) {
   let got = null;
+  if (ROADS_ONLY && !isRoad(f)) {
+    const keep = prevById.get(f.id);
+    if (keep) results.push(keep); else failures.push(f.id);
+    continue;
+  }
   try {
     if (f.kind === 'point') got = matchPoint(f, pointEls);
     else if (f.river) got = matchLine(f, riverWays);

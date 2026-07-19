@@ -27,14 +27,27 @@ const TRUTH_PATH = join(HERE, 'geo-truth.json');
 const TRUTH = existsSync(TRUTH_PATH) ? JSON.parse(readFileSync(TRUTH_PATH, 'utf8')).features : [];
 
 // --- the runtime spread transform, copied EXACTLY from main.js -------------
-const { factor: SPREAD, innerKm: SP_A0, outerKm: SP_A1, farFactor: SP_OUT } = CITY.planet.spread;
+const { factor: SPREAD, innerKm: SP_A0, outerKm: SP_A1, farFactor: SP_OUT, boost: SP_BOOST } = CITY.planet.spread;
+function boostExtra(d) {
+  if (!SP_BOOST) return 0;
+  const { s0, z: [z1, z2, z3, z4], dip } = SP_BOOST, base = SPREAD;
+  const S = u => u * u * u - u * u * u * u * 0.5;
+  const e1 = s0 - base, e2 = dip - base;
+  let E = 0, t = Math.min(d, z1); E += e1 * t;
+  if (d > z1) { const L = z2 - z1, u = Math.min((d - z1) / L, 1); E += e1 * L * u + (e2 - e1) * L * S(u); }
+  if (d > z2) { E += e2 * (Math.min(d, z3) - z2); }
+  if (d > z3) { const L = z4 - z3, u = Math.min((d - z3) / L, 1); E += e2 * L * u + (0 - e2) * L * S(u); }
+  return E;
+}
+const BOOST_TAIL = SP_BOOST ? boostExtra(SP_BOOST.z[3]) : 0;
 function spreadDist(d) {
   const L = SP_A1 - SP_A0;
   let G;
   if (d <= SP_A0) G = 0;
   else if (d < SP_A1) { const u = (d - SP_A0) / L; G = L * (u * u * u - u * u * u * u * 0.5); }
   else G = L * 0.5 + (d - SP_A1);
-  return Math.min(SPREAD * d + (SP_OUT - SPREAD) * G, 17.9);
+  const boost = SP_BOOST && d < SP_BOOST.z[3] ? boostExtra(d) - BOOST_TAIL * (d / SP_BOOST.z[3]) : 0;
+  return Math.min(SPREAD * d + (SP_OUT - SPREAD) * G + boost, 17.9);
 }
 function warpKm(x, y) { const d = Math.hypot(x, y); if (d < 1e-6) return { x: 0, y: 0 }; const k = spreadDist(d) / d; return { x: x * k, y: y * k }; }
 const stretchAt = (x, y) => { const d = Math.hypot(x, y) || 1e-4; return spreadDist(d) / d; };

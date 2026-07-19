@@ -19,10 +19,11 @@ console.log(`City definition valid: ${JSON.stringify(totals)}`);
 
 // ---- drift report vs scripts/geo-truth.json --------------------------------
 // Compares authored city coordinates (real km from Taipei 101) against the
-// OSM ground truth. WARN-ONLY until the Phase 2 normalization lands —
-// downtown is known-inflated ~x1.9, and this report is the migration
-// worklist. --strict fails past zone tolerance; Phase 2 flips the default.
-const STRICT = process.argv.includes('--strict');
+// OSM ground truth. STRICT by default since the Phase 2 normalization:
+// city data IS real km now, so drifting past zone tolerance fails the check.
+// Pass --no-strict for a warn-only report. Zone C (backdrop ranges) checks
+// BEARING only — those anchors intentionally keep compressed distances.
+const STRICT = !process.argv.includes('--no-strict');
 const TRUTH_PATH = join(dirname(fileURLToPath(import.meta.url)), 'geo-truth.json');
 if (!existsSync(TRUTH_PATH)) {
   console.log('drift report: scripts/geo-truth.json missing — run scripts/fetch-geo-truth.mjs');
@@ -50,9 +51,18 @@ if (!existsSync(TRUTH_PATH)) {
   for (const s of pointSources) {
     const t = truth.get(s.id);
     if (!t || t.kind !== 'point') continue;
-    const drift = Math.hypot(s.at[0] - t.at[0], s.at[1] - t.at[1]);
     const dGame = Math.hypot(...s.at), dTruth = Math.hypot(...t.at);
     const ratio = dTruth > 0.05 ? dGame / dTruth : 1;
+    if (t.zone === 'C') {
+      // backdrop ranges: true bearing at compressed distance — check angle only
+      const bg = Math.atan2(s.at[0], s.at[1]), bt = Math.atan2(t.at[0], t.at[1]);
+      let dA = Math.abs(bg - bt) * 180 / Math.PI; if (dA > 180) dA = 360 - dA;
+      // encode bearing error as km at the game radius so one report covers both
+      const drift = dA / 10 * (TOL.C ?? 1.5);       // 10 deg of bearing == the C tolerance
+      rows.push({ id: s.id, what: s.what, zone: 'C', drift, ratio, note: `bearing off ${dA.toFixed(1)} deg (10 allowed)` });
+      continue;
+    }
+    const drift = Math.hypot(s.at[0] - t.at[0], s.at[1] - t.at[1]);
     rows.push({ id: s.id, what: s.what, zone: t.zone, drift, ratio, note: `game [${s.at}] truth [${t.at}]` });
   }
   // line features: roads, rivers — drift is the worst game point's distance to
