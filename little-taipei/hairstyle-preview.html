@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Little Taipei — hairstyle preview (dev only)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{color-scheme:light;font-family:system-ui,sans-serif;color:#1d332e}
+  html,body{margin:0;height:100%;overflow:hidden;background:#a9d3ce}
+  #app{position:fixed;inset:0}
+  #panel{position:fixed;top:12px;left:12px;width:min(330px,calc(100vw - 24px));z-index:5;
+    padding:12px;border:2px solid #1d332e;border-radius:14px;background:rgba(255,255,255,.92);box-sizing:border-box}
+  h1{margin:0 0 10px;font-size:16px;line-height:1.2}
+  .label{margin:10px 0 5px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.72}
+  .choices{display:flex;flex-wrap:wrap;gap:6px}
+  button{font:600 13px system-ui;padding:7px 10px;border-radius:9px;border:2px solid #1d332e;background:#fff;color:#1d332e;cursor:pointer}
+  button:hover{background:#e6f0ed} button.on{background:#1d332e;color:#fff}
+  .swatch{width:28px;height:28px;padding:0;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+  .swatch.on{border-color:#fff;box-shadow:0 0 0 3px #1d332e,inset 0 0 0 1px rgba(255,255,255,.5)}
+  #tip{position:fixed;bottom:10px;left:12px;color:#1d332e;font:500 13px system-ui;opacity:.75;z-index:5}
+  @media(max-width:620px){#panel{max-height:calc(100vh - 46px);overflow:auto}#tip{display:none}}
+</style>
+<script type="importmap">
+{ "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.184.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<aside id="panel">
+  <h1>Hairstyle preview</h1>
+  <div class="label">Character</div>
+  <div id="characters" class="choices"></div>
+  <div class="label">Style</div>
+  <div id="styles" class="choices"></div>
+  <div class="label">Hair colour</div>
+  <div id="colours" class="choices"></div>
+  <div class="label">Motion</div>
+  <div id="motion" class="choices">
+    <button data-mode="idle" class="on">Idle</button>
+    <button data-mode="walk">Walk</button>
+    <button data-mode="run">Run</button>
+    <button id="spin">Turntable</button>
+  </div>
+</aside>
+<div id="tip">drag to orbit · scroll to zoom · select a style or colour to rebuild the model</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { HAIRC, HAIRSTYLES, makeCharacter, createCharacterAnimator } from './character.js';
+
+const STYLE_LABELS={
+  fluffy:'Fluffy', wavy:'Wavy', bob:'Bob', short:'Short',
+  'mohawk-classic':'Mohawk · classic',
+  'mohawk-radial-five':'Mohawk · radial 5',
+  'mohawk-radial-extended':'Mohawk · radial 8',
+};
+const CHARACTERS={
+  red:{label:'Red tee',opt:{shirt:'#c9433e',pants:'#33363b',skin:'#f7c79a',shoe:'dark',raglan:false}},
+  teal:{label:'Teal tee',opt:{shirt:'#3b9fb1',pants:'#65705a',skin:'#eab38a',shoe:'light',raglan:false}},
+  blue:{label:'Blue raglan',opt:{shirt:'#3f9bd8',pants:'#33363b',skin:'#eab38a',shoe:'dark',raglan:true}},
+  pink:{label:'Pink tee',opt:{shirt:'#ef9bb3',pants:'#5c6b80',skin:'#d39c73',shoe:'light',raglan:false}},
+  green:{label:'Green tee',opt:{shirt:'#7fb069',pants:'#4a5a52',skin:'#b87a4f',shoe:'dark',raglan:false}},
+};
+const state={character:'blue',style:'mohawk-classic',hair:'#2b2523',mode:'idle',spin:false};
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+document.getElementById('app').appendChild(renderer.domElement);
+
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#a9d3ce');
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,100); camera.position.set(0,1.4,4.1);
+const controls=new OrbitControls(camera,renderer.domElement); controls.target.set(0,0.9,0); controls.enableDamping=true;
+const sun=new THREE.DirectionalLight('#fff4e0',1.25); sun.position.set(3,6,4); scene.add(sun);
+scene.add(new THREE.AmbientLight('#ffffff',0.55));
+const ground=new THREE.Mesh(new THREE.CircleGeometry(4,48),new THREE.MeshToonMaterial({color:'#e7dcc2'}));
+ground.rotation.x=-Math.PI/2; scene.add(ground);
+const rig=new THREE.Group(); scene.add(rig);
+let character, animator;
+
+function rebuildCharacter(){
+  if(character) rig.remove(character);
+  character=makeCharacter({...CHARACTERS[state.character].opt,cap:false,hair:state.hair,hairStyle:state.style,rng:()=>0.25});
+  rig.add(character);
+  animator=createCharacterAnimator(character,{maxSpeed:3,seed:'hairstyle-preview'});
+}
+function refreshControls(){
+  document.querySelectorAll('[data-character]').forEach(button=>button.classList.toggle('on',button.dataset.character===state.character));
+  document.querySelectorAll('[data-style]').forEach(button=>button.classList.toggle('on',button.dataset.style===state.style));
+  document.querySelectorAll('[data-colour]').forEach(button=>button.classList.toggle('on',button.dataset.colour===state.hair));
+  document.querySelectorAll('[data-mode]').forEach(button=>button.classList.toggle('on',button.dataset.mode===state.mode));
+  document.getElementById('spin').classList.toggle('on',state.spin);
+}
+function setHair(colour){ state.hair=colour; rebuildCharacter(); refreshControls(); }
+
+const characters=document.getElementById('characters');
+for(const [id,spec] of Object.entries(CHARACTERS)){
+  const button=document.createElement('button'); button.dataset.character=id; button.textContent=spec.label;
+  button.onclick=()=>{state.character=id; rebuildCharacter(); refreshControls();}; characters.appendChild(button);
+}
+const styles=document.getElementById('styles');
+for(const style of HAIRSTYLES){
+  const button=document.createElement('button'); button.dataset.style=style; button.textContent=STYLE_LABELS[style]||style;
+  button.onclick=()=>{state.style=style; rebuildCharacter(); refreshControls();}; styles.appendChild(button);
+}
+const colours=document.getElementById('colours');
+for(const colour of HAIRC){
+  const button=document.createElement('button'); button.className='swatch'; button.dataset.colour=colour; button.style.setProperty('--swatch',colour);
+  button.title=colour; button.setAttribute('aria-label',`Hair colour ${colour}`); button.onclick=()=>setHair(colour); colours.appendChild(button);
+}
+document.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>{state.mode=button.dataset.mode; refreshControls();});
+document.getElementById('spin').onclick=()=>{state.spin=!state.spin; refreshControls();};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+rebuildCharacter(); refreshControls();
+window.__hairstylePreview={camera,controls,rig,state,
+  setCharacter:(id)=>{if(CHARACTERS[id]){state.character=id;rebuildCharacter();refreshControls();}},
+  setStyle:(style)=>{if(HAIRSTYLES.includes(style)){state.style=style;rebuildCharacter();refreshControls();}},setHair};
+const SPEED={idle:0,walk:1.1,run:3}; const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{
+  const dt=Math.min(clock.getDelta(),0.05),speed=SPEED[state.mode];
+  animator.update(dt,{speed,distance:speed*dt,grounded:true});
+  if(state.spin) rig.rotation.y+=dt*0.6;
+  controls.update(); renderer.render(scene,camera);
+});
+</script>
+</body>
+</html>
