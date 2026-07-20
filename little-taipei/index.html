@@ -26,6 +26,7 @@
     <div id="btnDress" class="iconbtn" title="Customize your look"><span class="ic">🎨</span><span class="lbl">Look</span></div>
     <div id="btnMenu" class="iconbtn" title="Menu"><span class="ic">☰</span></div>
   </div>
+  <div id="cameraPrototype" class="panel" aria-live="polite"></div>
   <svg id="objArrow" viewBox="0 0 100 100"><path d="M50 6 L74 64 L50 50 L26 64 Z" fill="#e9785b" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg>
   <div id="lb" class="panel"><h3>🏮 Top Runners</h3><ol id="lbList"></ol></div>
   <div id="roomline">💌 invite friends</div>
@@ -56,8 +57,8 @@
   <div class="card">
     <h1>How to play 🧭</h1>
     <div class="helpGrid">
-      <span class="hIc">🕹️</span><span><b>Move</b> — WASD / arrows, or the left-side joystick</span>
-      <span class="hIc">👀</span><span><b>Look around</b> — drag the screen</span>
+      <span class="hIc">🕹️</span><span id="helpMove"><b>Move</b> — WASD / arrows, or the left-side joystick</span>
+      <span class="hIc">👀</span><span id="helpLook"><b>Camera</b> — follows your runner</span>
       <span class="hIc">🐸</span><span><b>Hop</b> — Space, or the HOP button</span>
       <span class="hIc">🤝</span><span><b>Talk</b> — E / click, or the TALK button next to a neighbour</span>
       <span class="hIc">💛</span><span><b>React</b> — keys 1–9, or the REACT button</span>
@@ -72,7 +73,7 @@
   <div class="card">
     <h1>TAIPEI 台北</h1>
     <p>A tiny planet shaped like Taipei — and you're its neighbourhood runner. Weave from the night markets to Taipei 101, past the temples and the river, carrying bubble tea, hot xiaolongbao and little favours from one neighbour to the next. Keep the whole city fed and happy. 🧋</p>
-    <div class="keys">
+    <div class="keys" id="introKeys">
       <span>WASD / Arrows — move</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>
     </div>
     <div class="row">

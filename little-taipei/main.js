@@ -2202,10 +2202,9 @@ function updatePlayer(dt){
   _playerPrevDir.copy(surfDir); _playerPrevHeading.copy(heading);
   // re-orthogonalize heading
   heading.addScaledVector(up, -heading.dot(up)).normalize();
-  // turn
   if(inputTurn) heading.applyAxisAngle(up, -inputTurn*TURN*dt);
-  // move along surface
-  const sp = inputMove*MOVE;
+  // All camera prototypes retain the original character-relative tank movement.
+  const sp=inputMove*MOVE;
   if(sp!==0){
     _playerMovePrev.copy(surfDir);
     _playerMoveRight.crossVectors(up,heading).normalize();
@@ -2622,6 +2621,9 @@ let camYaw=0, camPitch=0.46;
 let czOrbit = 0;   // turntable angle while the customizer is open
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
+const CAMERA_CONTROL_MODES=['locked','pitch-look','yaw-look','less-freelook','freelook'];
+const requestedCameraMode=new URLSearchParams(location.search).get('camera');
+let cameraControlMode=CAMERA_CONTROL_MODES.includes(requestedCameraMode)?requestedCameraMode:'locked';
 const camUp=new THREE.Vector3(0,1,0);
 const camFollowHeading=heading.clone();
 const camLook=player.position.clone().addScaledVector(surfDir,1.63);
@@ -2630,10 +2632,77 @@ let camPull=1;                     // smoothed occlusion pull-in (fraction of de
 const _camP=new THREE.Vector3(), _camSeg=new THREE.Vector3(), _camDir=new THREE.Vector3(), _camLookGoal=new THREE.Vector3();
 const _camTestHeading=new THREE.Vector3(), _camCandidate=new THREE.Vector3();
 const CAM_AVOID_ANGLES=[0,0.24,-0.24,0.48,-0.48,0.72,-0.72,0.96,-0.96,1.20,-1.20,1.44,-1.44];
+const cameraPrototypeEl=document.getElementById('cameraPrototype');
+const CAMERA_CONTROL_LABELS={
+  locked:'Locked follow',
+  'pitch-look':'Pitch-look follow',
+  'yaw-look':'Yaw-look follow',
+  'less-freelook':'Less free-look follow',
+  freelook:'Free-look follow'
+};
+const LESS_FREELOOK_YAW_LIMIT=0.85;      // ±49° — a deliberate around-the-corner peek
+const LESS_FREELOOK_PITCH_MAX=0.49;      // 33% less street pitch travel than free-look
+function isLessFreeLook(){ return cameraControlMode==='less-freelook'; }
+function allowsPitchLook(){ return cameraControlMode==='pitch-look' || isLessFreeLook() || cameraControlMode==='freelook'; }
+function allowsYawLook(){ return cameraControlMode==='yaw-look' || isLessFreeLook() || cameraControlMode==='freelook'; }
+function cameraPitchInputMax(){ return isLessFreeLook()?LESS_FREELOOK_PITCH_MAX:1.25; }
+function streetPitchMax(){ return isLessFreeLook()?LESS_FREELOOK_PITCH_MAX:(allowsPitchLook()?0.72:0.38); }
+function constrainCameraControls(){
+  if(!allowsYawLook()) camYaw=0;
+  else if(isLessFreeLook()) camYaw=THREE.MathUtils.clamp(camYaw,-LESS_FREELOOK_YAW_LIMIT,LESS_FREELOOK_YAW_LIMIT);
+  if(!allowsPitchLook()) camPitch=camMode==='map'?0.46:0.11;
+  else camPitch=THREE.MathUtils.clamp(camPitch,0.02,cameraPitchInputMax());
+}
+function updateCameraControlCopy(){
+  const pitchLook=allowsPitchLook();
+  const yawLook=allowsYawLook();
+  const lessFreeLook=isLessFreeLook();
+  const freeLook=cameraControlMode==='freelook';
+  document.getElementById('helpMove').innerHTML='<b>Move</b> — WASD / arrows, or the left-side joystick';
+  document.getElementById('helpLook').innerHTML=freeLook
+    ? '<b>Look around</b> — drag the screen or right side'
+    : (lessFreeLook
+      ? '<b>Look around</b> — drag within a restrained orbit'
+      : (pitchLook
+        ? '<b>Look up/down</b> — drag vertically'
+        : (yawLook
+          ? '<b>Look left/right</b> — drag horizontally'
+          : '<b>Camera</b> — follows your runner')));
+  const introKeys=document.getElementById('introKeys');
+  if(introKeys) introKeys.innerHTML=isTouch()
+    ? (freeLook
+      ? '<span>left thumb — move</span><span>drag right side — look</span><span>✋ — interact</span>'
+      : (lessFreeLook
+        ? '<span>left thumb — move</span><span>drag right side — restrained look</span><span>✋ — interact</span>'
+        : (pitchLook
+          ? '<span>left thumb — move</span><span>drag up/down — camera height</span><span>✋ — interact</span>'
+          : (yawLook
+            ? '<span>left thumb — move</span><span>drag left/right — peek</span><span>✋ — interact</span>'
+            : '<span>left thumb — move</span><span>camera — follows runner</span><span>✋ — interact</span>'))))
+    : (freeLook
+      ? '<span>WASD / Arrows — move</span><span>Drag — look around</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+      : (lessFreeLook
+        ? '<span>WASD / Arrows — move</span><span>Drag — restrained look</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+        : (pitchLook
+          ? '<span>WASD / Arrows — move</span><span>Drag up/down — camera height</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+          : (yawLook
+            ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+            : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'))));
+  const prototype=pitchLook||yawLook;
+  cameraPrototypeEl.textContent=prototype?'Camera prototype · '+CAMERA_CONTROL_LABELS[cameraControlMode]:'';
+  cameraPrototypeEl.classList.toggle('show',prototype);
+}
+function setCameraControlMode(mode){
+  cameraControlMode=CAMERA_CONTROL_MODES.includes(mode)?mode:'locked';
+  constrainCameraControls();
+  updateCameraControlCopy();
+  return cameraControlMode;
+}
 // debug/verification override (bypasses zoom clamps): d<=8 targets street mode, else map
 window.__cam=(d,p,y)=>{ if(d!=null){ if(d>8){ camMode='map'; mapDist=d; } else { camMode='street'; streetDist=d; } }
   if(p!=null)camPitch=p; if(y!=null)camYaw=y; return {camMode,streetDist,mapDist,camPitch,camYaw,camAvoidYaw}; };
 window.__camMode=(m)=>{ if(m==='street'||m==='map'){ camMode=m; camPitch=(m==='map')?0.46:0.11; camYaw=0; } return camMode; };
+window.__cameraControls=(m)=>m==null?cameraControlMode:setCameraControlMode(m);
 // march the look→camera segment; report the first fraction blocked by city
 // fabric (building-sized colliders / terrain) so the camera can pull in front
 function camBlockT(from,to){
@@ -2662,7 +2731,7 @@ function updateCamera(dt){
   camBlend+=(tgt-camBlend)*Math.min(1,dt*3.5); if(Math.abs(camBlend-tgt)<0.003) camBlend=tgt;
   const b=camBlend;
   const pitch=THREE.MathUtils.lerp(
-    THREE.MathUtils.clamp(camPitch,0.02,0.38),        // street: near eye-level
+    THREE.MathUtils.clamp(camPitch,0.02,streetPitchMax()), // street: near eye-level, or a bounded test pitch
     THREE.MathUtils.clamp(camPitch,0.25,1.25), b);    // map: classic drone
   const dist=THREE.MathUtils.lerp(streetDist,mapDist,b)-camKick;
   const fov=THREE.MathUtils.lerp(58,55,b);
@@ -2745,13 +2814,21 @@ function readKeys(){
 }
 function tryJump(){ if(grounded && started && !customizing){ vVel=JUMP; grounded=false; doSquash(0.96,1.04); sfxJump(); } }
 
-// Pointer movement only distinguishes a click from a drag. The street shot is
-// intentionally authored like Abeto: yaw follows the runner and pitch is fixed.
+// Locked follow only distinguishes a click from a drag. Prototype modes reuse
+// the same pointer path for bounded pitch or yaw/pitch while preserving click-to-interact.
 let dragging=false, lastX=0,lastY=0, downX=0,downY=0, movedFar=false;
-renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#touch')) return;
+renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#touch') || (e.pointerType==='mouse' && e.button!==0)) return;
   document.body.classList.remove('menuOpen');
   dragging=true; lastX=e.clientX; lastY=e.clientY; downX=e.clientX; downY=e.clientY; movedFar=false; });
 addEventListener('pointermove',e=>{ if(!dragging) return;
+  const dx=e.clientX-lastX, dy=e.clientY-lastY;
+  if(allowsYawLook()){
+    camYaw+=dx*(isLessFreeLook()?0.004:0.006);
+    if(isLessFreeLook()) camYaw=THREE.MathUtils.clamp(camYaw,-LESS_FREELOOK_YAW_LIMIT,LESS_FREELOOK_YAW_LIMIT);
+  }
+  if(allowsPitchLook()){
+    camPitch=THREE.MathUtils.clamp(camPitch-dy*(isLessFreeLook()?0.0033:0.005),0.02,cameraPitchInputMax());
+  }
   lastX=e.clientX; lastY=e.clientY;
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>6) movedFar=true; });
 addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')) doInteract(); dragging=false; });
@@ -3259,10 +3336,8 @@ addEventListener('resize',resize);
 
 renderer.compile(scene,camera);
 document.getElementById('loader').style.display='none';
-if(isTouch()){ touchEl.style.display='block';
-  const k=document.querySelector('#intro .keys');
-  if(k) k.innerHTML='<span>left thumb — walk</span><span>drag right side — look</span><span>✋ — interact</span>';
-}
+if(isTouch()) touchEl.style.display='block';
+updateCameraControlCopy();
 tw(document.body);                 // twemojify all static UI
 animate();
 
@@ -3278,7 +3353,7 @@ beginBtn.addEventListener('click',()=>{
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
   initMultiplayer();               // join only after the player chooses a leaderboard/display name
-  camMode='street'; camPitch=0.11; camYaw=0; // swoop into the locked, authored street shot
+  camMode='street'; camPitch=0.11; camYaw=0; // swoop into the authored street shot
   initAudio();
   newQuest();
 });
@@ -3300,7 +3375,7 @@ function lookAtKm(xkm,ykm,dist=14,height=7,yawDeg=0){
 Object.assign(window, { __game:{ scene, camera, mapDir, groundR, lookAtKm, planetGroup, player, makeCharacter, makeMarker, get score(){return score;},
   setRoom:(r)=>{room=r;}, remote, get myName(){return myName;}, set myName(v){myName=v;}, get carrying(){return carrying;},
   spawnEmoteOn:(em,g)=>spawnEmote(em,g), updateRemotesMap:remote, getPlayer:()=>player, THREE,
-  motionConfig:MOTION,
+  motionConfig:MOTION, get cameraControls(){return cameraControlMode;}, setCameraControls:setCameraControlMode,
   motionState:()=>({mode:playerAnimator&&playerAnimator.mode,phase:playerAnimator&&+playerAnimator.phase.toFixed(3),speed:playerAnimator&&+playerAnimator.speed.toFixed(3),grounded,verticalSpeed:+vVel.toFixed(3)}),
   debug:()=>({carrying, score, near:nearTarget?nearTarget.name:null, obj:objText.textContent,
     senderDist: sender?+player.position.distanceTo(sender.group.position).toFixed(2):null,
