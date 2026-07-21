@@ -2737,7 +2737,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#to
 addEventListener('pointermove',e=>{ if(!dragging) return;
   lastX=e.clientX; lastY=e.clientY;
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>6) movedFar=true; });
-addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn')) doInteract(); dragging=false; });
+addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')) doInteract(); dragging=false; });
 // wheel zoom — in-zone zoom, with a mode flip at the end of each zone
 addEventListener('wheel',e=>{
   const d=e.deltaY*0.012;
@@ -2868,6 +2868,8 @@ document.getElementById('btnSound').addEventListener('click',()=>{ audioOn=!audi
 const helpOverlay=document.getElementById('helpOverlay');
 document.getElementById('btnHelp').addEventListener('click',()=>{ helpOverlay.classList.add('show'); document.body.classList.remove('menuOpen'); });
 document.getElementById('helpClose').addEventListener('click',()=>helpOverlay.classList.remove('show'));
+document.getElementById('btnDress').addEventListener('click',()=>{ customizing ? closeCustomize() : openCustomize(); });
+document.getElementById('czClose').addEventListener('click', closeCustomize);
 helpOverlay.addEventListener('pointerdown',e=>{ if(e.target===helpOverlay) helpOverlay.classList.remove('show'); });
 // the GitHub invite card retracts into a small pill once you've settled in
 setTimeout(()=>{ const g=document.getElementById('githubHelp');
@@ -2948,6 +2950,54 @@ function resolveAppearance(name, code){
   }
   return base;
 }
+
+const STYLE_LABELS = {
+  fluffy:'Fluffy', wavy:'Wavy', bob:'Bob', short:'Short',
+  'mohawk-classic':'Mohawk · classic', 'mohawk-radial-five':'Mohawk · radial 5', 'mohawk-radial-extended':'Mohawk · radial 8',
+};
+const ACCESSORY_LABELS = { boba:'🧋 Boba', easycard:'💳 EasyCard', tanghulu:'🍡 Tanghulu', bear:'🧸 Bear', scooterHelmet:'🛵 Helmet' };
+let customizing = false;   // true while the panel is open (camera + input gating read this)
+
+function applyLocalOverrides(){
+  myAppearanceCode = encodeAppearanceCode(myOverrides);
+  setLocalAppearance(resolveAppearance(myName, myAppearanceCode));
+  buildCustomizePanel();   // reflect the new selection state
+}
+
+function buildCustomizePanel(){
+  const body = document.getElementById('czBody');
+  if(!body || !myOverrides) return;
+  const section = (label) => { const h=document.createElement('div'); h.className='czLabel'; h.textContent=label;
+                               const row=document.createElement('div'); row.className='czRow'; body.append(h,row); return row; };
+  body.textContent = '';
+  // hairstyle
+  const rHair = section('Hairstyle');
+  for(const s of HAIRSTYLES){ const b=document.createElement('button'); b.textContent=STYLE_LABELS[s]||s;
+    if(s===myOverrides.hairStyle) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.hairStyle=s; applyLocalOverrides(); }; rHair.append(b); }
+  // hair colour
+  const rHC = section('Hair colour');
+  for(const c of HAIRC){ const b=document.createElement('button'); b.className='czSwatch'; b.style.background=c;
+    if(c===myOverrides.hair) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.hair=c; applyLocalOverrides(); }; rHC.append(b); }
+  // shirt colour
+  const rSh = section('Shirt colour');
+  for(const c of SHIRTS){ const b=document.createElement('button'); b.className='czSwatch'; b.style.background=c;
+    if(c===myOverrides.shirt) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.shirt=c; applyLocalOverrides(); }; rSh.append(b); }
+  // accessory
+  const rAcc = section('Accessory');
+  for(const a of ACCESSORY_CHOICES){ const b=document.createElement('button'); b.textContent=a?ACCESSORY_LABELS[a]:'None';
+    if((a||null)===(myOverrides.accessory||null)) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.accessory=a; applyLocalOverrides(); }; rAcc.append(b); }
+  tw(body);   // twemojify the accessory emoji labels
+}
+
+function openCustomize(){ customizing=true; document.getElementById('customize').classList.add('show');
+  document.getElementById('customize').setAttribute('aria-hidden','false'); document.body.classList.remove('menuOpen'); buildCustomizePanel(); }
+function closeCustomize(){ customizing=false; document.getElementById('customize').classList.remove('show');
+  document.getElementById('customize').setAttribute('aria-hidden','true'); }
+
 function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'), r=toon('#c2473b');
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.245,0.40,7),w));
   const st=new THREE.Mesh(new THREE.CylinderGeometry(0.252,0.252,0.06,7),r); st.position.y=0.04; g.add(st);
