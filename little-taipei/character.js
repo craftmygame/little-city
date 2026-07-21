@@ -21,7 +21,7 @@ export const HAIRC  = ['#2b2523', '#1f2126', '#3a2a1d', '#4a3423', '#5c4030', '#
 export const SHIRTS = ['#c9433e', '#3f9bd8', '#f2eee3', '#e9c06a', '#7fb069', '#b79ad6', '#ef9bb3', '#5a7fa0'];
 export const PANTSC = ['#33363b', '#b3a284', '#5c6b80', '#4a5a52', '#8a6243', '#615b72'];
 export const CAPS   = ['#b56a63', '#5a7fa0', '#6a9678', '#c2a05a', '#8a7fb0', '#4a5160'];
-export const HAIRSTYLES = ['fluffy', 'wavy', 'bob', 'short'];
+export const HAIRSTYLES = ['fluffy', 'wavy', 'bob', 'short', 'mohawk-classic', 'mohawk-radial-five', 'mohawk-radial-extended'];
 export const CHARACTER_VISUAL_SCALE = 0.72;   // 2.42u source rig → ~1.75u human ruler
 
 /* ---------------- toon material helpers (self-contained) ------------- */
@@ -266,6 +266,79 @@ function buildHair(head, style, mHair, add, hasCap, rng){
     m.scale.set(sx,sy,sz); m.rotation.set(rx,ry,rz); return m;
   };
   const sweep = rng()<0.5 ? 1 : -1;   // which eye the fringe drifts toward
+
+  const spike=(root,tip,r=0.085)=>{
+    const a=new THREE.Vector3(...root), b=new THREE.Vector3(...tip), delta=b.clone().sub(a);
+    const mesh=add(hg,faceted(new THREE.ConeGeometry(r,delta.length(),6)),mHair);
+    mesh.position.copy(a).add(b).multiplyScalar(0.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+    return mesh;
+  };
+
+  const radialTowers=(variant='classic')=>{
+    // Reference: a tall, narrow, swept-back strip. The base is deliberately
+    // thin, then overlapping cones form a single continuous ridge.
+    let towers;
+    if(variant==='extended'){
+      // A true head-following profile arc: approximately 11 o'clock at the
+      // forehead, over 12, and down to 3 o'clock at the rear of the skull.
+      // This deliberately replaces the original shallow, straight root line.
+      const heights=[0.62,0.80,0.94,0.81,0.63,0.58,0.53,0.4725];
+      const leans=[0.16,0.10,0,-0.10,-0.18,-0.25,-0.32,-0.38];
+      const radii=[0.145,0.145,0.145,0.145,0.145,0.134,0.121,0.10875];
+      towers=heights.map((h,i)=>{
+        const angle=THREE.MathUtils.lerp(Math.PI/3,Math.PI,i/7);
+        // Preserve the normal for the final cone orientation. Its tip is
+        // projected straight out from the skull—not nudged toward global up.
+        return [0.42*Math.cos(angle),0.20+0.42*Math.sin(angle),h,leans[i],radii[i],Math.cos(angle),Math.sin(angle)];
+      });
+    } else {
+      // The classic uses a straight capsule ridge under its upward-biased
+      // cones. Radial styles own their curved hairline entirely through their
+      // cone roots; carrying this ridge into radial-five creates a loose tuft.
+      if(variant==='classic'){
+        const ridge=add(hg,faceted(new THREE.CapsuleGeometry(0.13,0.48,4,8)),mHair,0,0.47,0);
+        ridge.rotation.x=Math.PI/2;
+      }
+      towers=[[0.29,0.47,0.62,0.16,0.145],[0.16,0.47,0.80,0.10,0.145],[0.02,0.47,0.94,0,0.145],[-0.13,0.47,0.81,-0.10,0.145],[-0.27,0.47,0.63,-0.18,0.145]];
+      if(variant==='radial-five'){
+        // Use the first five anchors from the extended style's head-following
+        // arc. This makes the hairline continuous instead of moving only its
+        // leading cone and leaving the next four behind it.
+        towers=towers.map((tower,i)=>{
+          const angle=Math.PI/3+i*(2*Math.PI/21); // same step as extended's eight roots
+          tower[0]=0.42*Math.cos(angle);
+          tower[1]=0.20+0.42*Math.sin(angle);
+          return tower;
+        });
+        // Derive each direction from its actual base point on the skull
+        // instead of +Y.
+        towers=towers.map(([z,y,h,lean,r])=>{
+          const normal=new THREE.Vector3(0,y-0.20,z).normalize();
+          return [z,y,h,lean,r,normal.z,normal.y];
+        });
+      }
+    }
+    for(const [z,y,h,lean,r,nz,ny] of towers){
+      const tip=variant!=='classic'
+        ? [0,y+h*ny,z+h*nz]             // uncompromising radial cone geometry
+        : [0,y+h,z+lean];
+      spike([0,y,z],tip,r);
+    }
+    return hg;
+  };
+
+  if(style==='mohawk-classic'){
+    return radialTowers('classic');
+  }
+
+  if(style==='mohawk-radial-five'){
+    return radialTowers('radial-five');
+  }
+
+  if(style==='mohawk-radial-extended'){
+    return radialTowers('extended');
+  }
 
   // base crown + nape — shared by every style: hair hugs the whole skull back
   lobe(0,0.34,-0.05, 0.44, 1.06,0.96,1.02);                       // crown dome
