@@ -22,6 +22,14 @@ export const SHIRTS = ['#c9433e', '#3f9bd8', '#f2eee3', '#e9c06a', '#7fb069', '#
 export const PANTSC = ['#33363b', '#b3a284', '#5c6b80', '#4a5a52', '#8a6243', '#615b72'];
 export const CAPS   = ['#b56a63', '#5a7fa0', '#6a9678', '#c2a05a', '#8a7fb0', '#4a5160'];
 export const HAIRSTYLES = ['fluffy', 'wavy', 'bob', 'short', 'mohawk-classic', 'mohawk-radial-five', 'mohawk-radial-extended'];
+// Auto-assignment pool (NPCs + name-derived players). Classics are weighted
+// heavily so the street crowd reads on-vibe; the three mohawks stay rare
+// (~3/23 ≈ 13%) but remain fully choosable via the customizer's HAIRSTYLES list.
+export const AUTO_HAIRSTYLES = [
+  ...Array(5).fill('fluffy'), ...Array(5).fill('wavy'),
+  ...Array(5).fill('bob'),    ...Array(5).fill('short'),
+  'mohawk-classic', 'mohawk-radial-five', 'mohawk-radial-extended',
+];
 export const CHARACTER_VISUAL_SCALE = 0.72;   // 2.42u source rig → ~1.75u human ruler
 
 /* ---------------- toon material helpers (self-contained) ------------- */
@@ -82,7 +90,7 @@ export function makeCharacter(opt = {}){
   const hairC = opt.hair  || pk(HAIRC);
   const shirt = opt.shirt || pk(SHIRTS);
   const pants = opt.pants || pk(PANTSC);
-  const hairStyle = (typeof opt.hairStyle==='string') ? opt.hairStyle : pk(HAIRSTYLES);
+  const hairStyle = (typeof opt.hairStyle==='string') ? opt.hairStyle : pk(AUTO_HAIRSTYLES);
   const capC  = (typeof opt.cap === 'string') ? opt.cap : pk(CAPS);
   const wantCap = opt.cap !== false && opt.cap !== undefined;
   const phones = !!opt.headphones;

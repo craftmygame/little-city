@@ -6,7 +6,7 @@ import { TAIPEI_CITY as CITY } from './city/taipei.js';
 import { validateCity } from './city/validate.js';
 // The runner kids (look + motion + Taiwan accessories) live in their own module now.
 import { makeCharacter, createCharacterAnimator, MOTION,
-         SKIN, HAIRC, SHIRTS, PANTSC, CAPS, HAIRSTYLES } from './character.js';
+         SKIN, HAIRC, SHIRTS, PANTSC, CAPS, HAIRSTYLES, AUTO_HAIRSTYLES } from './character.js';
 const MOTION_TAU = Math.PI * 2;
 // generic exponential damping (used by the player-speed filter in the game loop)
 const motionDamp=(a,b,rate,dt)=>a+(b-a)*(1-Math.exp(-rate*dt));
@@ -2908,7 +2908,7 @@ function appearanceFromName(name){
   const from=(arr,salt)=>arr[hash(salt)%arr.length];
   const accessory=ID_ACCESSORIES[hash('acc')%ID_ACCESSORIES.length];
   const helmet=accessory==='scooterHelmet';                 // a helmet is its own headgear…
-  return { skin:from(SKIN,'sk'), hair:from(HAIRC,'ha'), hairStyle:from(HAIRSTYLES,'hs'),
+  return { skin:from(SKIN,'sk'), hair:from(HAIRC,'ha'), hairStyle:from(AUTO_HAIRSTYLES,'hs'),
            shirt:from(SHIRTS,'sh'), pants:from(PANTSC,'pa'),
            cap: (!helmet && hash('capChance')%4===0) ? from(CAPS,'cp') : false,  // …so no cap under it
            raglan: hash('rag')%2===0,
