@@ -2114,6 +2114,8 @@ const player = new THREE.Group(); scene.add(player);
 // from the same broadcast name. A placeholder here would be visible through the
 // translucent intro and make the final avatar look like a post-join colour swap.
 let myAppearance=null;
+let myOverrides=null;           // {hairStyle,hair,shirt,accessory} — the four editable fields
+let myAppearanceCode='';        // encoded broadcast code for myOverrides
 let avatar=null;
 let playerAnimator=null;
 function localMotionSeed(ap){ return [ap.shirt,ap.pants,ap.skin,ap.hair,ap.hairStyle].join('|'); }
@@ -2915,6 +2917,37 @@ function appearanceFromName(name){
            headphones: !helmet && hash('hp')%5===0,          // and no headphones under it
            accessory };
 }
+// The customizer's accessory choices (distinct, plus an explicit "none").
+// Index space for the broadcast code's 4th field.
+const ACCESSORY_CHOICES = ['boba','easycard','tanghulu','bear','scooterHelmet', null];
+
+// Compact broadcast code for the four editable fields: dot-joined palette indices.
+function encodeAppearanceCode(ov){
+  const hs = Math.max(0, HAIRSTYLES.indexOf(ov.hairStyle));
+  const hc = Math.max(0, HAIRC.indexOf(ov.hair));
+  const sh = Math.max(0, SHIRTS.indexOf(ov.shirt));
+  let ac = ACCESSORY_CHOICES.indexOf(ov.accessory ?? null); if(ac < 0) ac = ACCESSORY_CHOICES.length - 1;
+  return [hs, hc, sh, ac].join('.');
+}
+function decodeAppearanceCode(code){
+  if(typeof code !== 'string') return null;
+  const p = code.split('.').map(n => parseInt(n, 10));
+  if(p.length !== 4 || p.some(n => !Number.isFinite(n))) return null;
+  return { hairStyle:HAIRSTYLES[p[0]], hair:HAIRC[p[1]], shirt:SHIRTS[p[2]], accessory:ACCESSORY_CHOICES[p[3]] };
+}
+// Full appearance for a peer/self: name-derived base with the editable fields overridden.
+function resolveAppearance(name, code){
+  const base = appearanceFromName(name);
+  const ov = decodeAppearanceCode(code);
+  if(ov){
+    if(ov.hairStyle) base.hairStyle = ov.hairStyle;
+    if(ov.hair)      base.hair      = ov.hair;
+    if(ov.shirt)     base.shirt     = ov.shirt;
+    base.accessory = ov.accessory || null;
+    if(base.accessory === 'scooterHelmet'){ base.cap = false; base.headphones = false; } // no double headgear
+  }
+  return base;
+}
 function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'), r=toon('#c2473b');
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.245,0.40,7),w));
   const st=new THREE.Mesh(new THREE.CylinderGeometry(0.252,0.252,0.06,7),r); st.position.y=0.04; g.add(st);
@@ -3155,7 +3188,10 @@ const beginBtn=document.getElementById('beginBtn');
 const SHOW_WELCOME_DURING_IMMERSION_QA=true;   // set false to skip the name screen while checking
 beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
-  setLocalAppearance(appearanceFromName(myName));   // create the final avatar before revealing the street
+  const base0 = appearanceFromName(myName);         // name-derived starting look
+  myOverrides = { hairStyle:base0.hairStyle, hair:base0.hair, shirt:base0.shirt, accessory:base0.accessory };
+  myAppearanceCode = encodeAppearanceCode(myOverrides);
+  setLocalAppearance(resolveAppearance(myName, myAppearanceCode));   // identical to base0, now driven by the codec
   playerShadow.visible=true;
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
