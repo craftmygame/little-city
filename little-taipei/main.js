@@ -6,7 +6,7 @@ import { TAIPEI_CITY as CITY } from './city/taipei.js';
 import { validateCity } from './city/validate.js';
 // The runner kids (look + motion + Taiwan accessories) live in their own module now.
 import { makeCharacter, createCharacterAnimator, MOTION,
-         SKIN, HAIRC, SHIRTS, PANTSC, CAPS, HAIRSTYLES } from './character.js';
+         SKIN, HAIRC, SHIRTS, PANTSC, CAPS, HAIRSTYLES, AUTO_HAIRSTYLES } from './character.js';
 const MOTION_TAU = Math.PI * 2;
 // generic exponential damping (used by the player-speed filter in the game loop)
 const motionDamp=(a,b,rate,dt)=>a+(b-a)*(1-Math.exp(-rate*dt));
@@ -2114,6 +2114,8 @@ const player = new THREE.Group(); scene.add(player);
 // from the same broadcast name. A placeholder here would be visible through the
 // translucent intro and make the final avatar look like a post-join colour swap.
 let myAppearance=null;
+let myOverrides=null;           // {hairStyle,hair,shirt,accessory} — the four editable fields
+let myAppearanceCode='';        // encoded broadcast code for myOverrides
 let avatar=null;
 let playerAnimator=null;
 function localMotionSeed(ap){ return [ap.shirt,ap.pants,ap.skin,ap.hair,ap.hairStyle].join('|'); }
@@ -2617,6 +2619,7 @@ function updateObjArrow(){
 let camMode='map';                 // intro shows the planet; BEGIN drops to street level
 let camBlend=1;                    // 0 = street … 1 = map (smoothed each frame)
 let camYaw=0, camPitch=0.46;
+let czOrbit = 0;   // turntable angle while the customizer is open
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
 const camUp=new THREE.Vector3(0,1,0);
@@ -2651,6 +2654,7 @@ function camBlockT(from,to){
   return 1;
 }
 function updateCamera(dt){
+  if(customizing){ return updateCustomizeCam(dt); }
   if(window.__freecam) return;   // debug/verification: hold a fixed framed view
   const up=surfDir;
   camKick=Math.max(0,camKick-dt*2.2);
@@ -2704,6 +2708,21 @@ function updateCamera(dt){
   camera.lookAt(look);
 }
 
+// A calm turntable framing the player from the front while the customizer is open.
+function updateCustomizeCam(dt){
+  const up = surfDir;
+  czOrbit += dt * 0.35;                                   // slow orbit
+  const dist = 3.4, pitch = 0.16, lookH = 1.5;
+  // camFollowHeading trails the (idle) runner; +π puts the camera in front to show the face, then orbit.
+  const camF = camFollowHeading.clone().applyAxisAngle(up, Math.PI + czOrbit);
+  const horiz = Math.cos(pitch) * dist, vert = Math.sin(pitch) * dist + lookH;
+  const look = player.position.clone().addScaledVector(up, lookH);
+  const desired = player.position.clone().addScaledVector(camF, -horiz).addScaledVector(up, vert);
+  camera.position.lerp(desired, 1 - Math.exp(-dt * 6));   // ease in on open, orbit while open
+  camUp.lerp(up, 1 - Math.exp(-dt * 8)).normalize(); camera.up.copy(camUp);
+  camera.lookAt(look);
+}
+
 // ---------------------------------------------------------------
 //  INPUT
 // ---------------------------------------------------------------
@@ -2724,7 +2743,7 @@ function readKeys(){
   if(m||t){ inputMove=m; inputTurn=t; }
   else if(!touchActive){ inputMove=0; inputTurn=0; }
 }
-function tryJump(){ if(grounded && started){ vVel=JUMP; grounded=false; doSquash(0.96,1.04); sfxJump(); } }
+function tryJump(){ if(grounded && started && !customizing){ vVel=JUMP; grounded=false; doSquash(0.96,1.04); sfxJump(); } }
 
 // Pointer movement only distinguishes a click from a drag. The street shot is
 // intentionally authored like Abeto: yaw follows the runner and pitch is fixed.
@@ -2735,7 +2754,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#to
 addEventListener('pointermove',e=>{ if(!dragging) return;
   lastX=e.clientX; lastY=e.clientY;
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>6) movedFar=true; });
-addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn')) doInteract(); dragging=false; });
+addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')) doInteract(); dragging=false; });
 // wheel zoom — in-zone zoom, with a mode flip at the end of each zone
 addEventListener('wheel',e=>{
   const d=e.deltaY*0.012;
@@ -2866,6 +2885,8 @@ document.getElementById('btnSound').addEventListener('click',()=>{ audioOn=!audi
 const helpOverlay=document.getElementById('helpOverlay');
 document.getElementById('btnHelp').addEventListener('click',()=>{ helpOverlay.classList.add('show'); document.body.classList.remove('menuOpen'); });
 document.getElementById('helpClose').addEventListener('click',()=>helpOverlay.classList.remove('show'));
+document.getElementById('btnDress').addEventListener('click',()=>{ customizing ? closeCustomize() : openCustomize(); });
+document.getElementById('czClose').addEventListener('click', closeCustomize);
 helpOverlay.addEventListener('pointerdown',e=>{ if(e.target===helpOverlay) helpOverlay.classList.remove('show'); });
 // the GitHub invite card retracts into a small pill once you've settled in
 setTimeout(()=>{ const g=document.getElementById('githubHelp');
@@ -2908,13 +2929,93 @@ function appearanceFromName(name){
   const from=(arr,salt)=>arr[hash(salt)%arr.length];
   const accessory=ID_ACCESSORIES[hash('acc')%ID_ACCESSORIES.length];
   const helmet=accessory==='scooterHelmet';                 // a helmet is its own headgear…
-  return { skin:from(SKIN,'sk'), hair:from(HAIRC,'ha'), hairStyle:from(HAIRSTYLES,'hs'),
+  return { skin:from(SKIN,'sk'), hair:from(HAIRC,'ha'), hairStyle:from(AUTO_HAIRSTYLES,'hs'),
            shirt:from(SHIRTS,'sh'), pants:from(PANTSC,'pa'),
            cap: (!helmet && hash('capChance')%4===0) ? from(CAPS,'cp') : false,  // …so no cap under it
            raglan: hash('rag')%2===0,
            headphones: !helmet && hash('hp')%5===0,          // and no headphones under it
            accessory };
 }
+// The customizer's accessory choices (distinct, plus an explicit "none").
+// Index space for the broadcast code's 4th field.
+const ACCESSORY_CHOICES = ['boba','easycard','tanghulu','bear','scooterHelmet', null];
+
+// Compact broadcast code for the four editable fields: dot-joined palette indices.
+function encodeAppearanceCode(ov){
+  const hs = Math.max(0, HAIRSTYLES.indexOf(ov.hairStyle));
+  const hc = Math.max(0, HAIRC.indexOf(ov.hair));
+  const sh = Math.max(0, SHIRTS.indexOf(ov.shirt));
+  let ac = ACCESSORY_CHOICES.indexOf(ov.accessory ?? null); if(ac < 0) ac = ACCESSORY_CHOICES.length - 1;
+  return [hs, hc, sh, ac].join('.');
+}
+function decodeAppearanceCode(code){
+  if(typeof code !== 'string') return null;
+  const p = code.split('.').map(n => parseInt(n, 10));
+  if(p.length !== 4 || p.some(n => !Number.isFinite(n))) return null;
+  return { hairStyle:HAIRSTYLES[p[0]], hair:HAIRC[p[1]], shirt:SHIRTS[p[2]], accessory:ACCESSORY_CHOICES[p[3]] };
+}
+// Full appearance for a peer/self: name-derived base with the editable fields overridden.
+function resolveAppearance(name, code){
+  const base = appearanceFromName(name);
+  const ov = decodeAppearanceCode(code);
+  if(ov){
+    if(ov.hairStyle) base.hairStyle = ov.hairStyle;
+    if(ov.hair)      base.hair      = ov.hair;
+    if(ov.shirt)     base.shirt     = ov.shirt;
+    base.accessory = ov.accessory || null;
+    if(base.accessory === 'scooterHelmet'){ base.cap = false; base.headphones = false; } // no double headgear
+  }
+  return base;
+}
+
+const STYLE_LABELS = {
+  fluffy:'Fluffy', wavy:'Wavy', bob:'Bob', short:'Short',
+  'mohawk-classic':'Mohawk · classic', 'mohawk-radial-five':'Mohawk · radial 5', 'mohawk-radial-extended':'Mohawk · radial 8',
+};
+const ACCESSORY_LABELS = { boba:'🧋 Boba', easycard:'💳 EasyCard', tanghulu:'🍡 Tanghulu', bear:'🧸 Bear', scooterHelmet:'🛵 Helmet' };
+let customizing = false;   // true while the panel is open (camera + input gating read this)
+
+function applyLocalOverrides(){
+  myAppearanceCode = encodeAppearanceCode(myOverrides);
+  setLocalAppearance(resolveAppearance(myName, myAppearanceCode));
+  buildCustomizePanel();   // reflect the new selection state
+}
+
+function buildCustomizePanel(){
+  const body = document.getElementById('czBody');
+  if(!body || !myOverrides) return;
+  const section = (label) => { const h=document.createElement('div'); h.className='czLabel'; h.textContent=label;
+                               const row=document.createElement('div'); row.className='czRow'; body.append(h,row); return row; };
+  body.textContent = '';
+  // hairstyle
+  const rHair = section('Hairstyle');
+  for(const s of HAIRSTYLES){ const b=document.createElement('button'); b.textContent=STYLE_LABELS[s]||s;
+    if(s===myOverrides.hairStyle) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.hairStyle=s; applyLocalOverrides(); }; rHair.append(b); }
+  // hair colour
+  const rHC = section('Hair colour');
+  for(const c of HAIRC){ const b=document.createElement('button'); b.className='czSwatch'; b.style.background=c;
+    if(c===myOverrides.hair) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.hair=c; applyLocalOverrides(); }; rHC.append(b); }
+  // shirt colour
+  const rSh = section('Shirt colour');
+  for(const c of SHIRTS){ const b=document.createElement('button'); b.className='czSwatch'; b.style.background=c;
+    if(c===myOverrides.shirt) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.shirt=c; applyLocalOverrides(); }; rSh.append(b); }
+  // accessory
+  const rAcc = section('Accessory');
+  for(const a of ACCESSORY_CHOICES){ const b=document.createElement('button'); b.textContent=a?ACCESSORY_LABELS[a]:'None';
+    if((a||null)===(myOverrides.accessory||null)) b.classList.add('on');
+    b.onclick=()=>{ myOverrides.accessory=a; applyLocalOverrides(); }; rAcc.append(b); }
+  tw(body);   // twemojify the accessory emoji labels
+}
+
+function openCustomize(){ customizing=true; czOrbit=0;   // always start the turntable facing the character's front
+  document.getElementById('customize').classList.add('show');
+  document.getElementById('customize').setAttribute('aria-hidden','false'); document.body.classList.remove('menuOpen'); buildCustomizePanel(); }
+function closeCustomize(){ customizing=false; document.getElementById('customize').classList.remove('show');
+  document.getElementById('customize').setAttribute('aria-hidden','true'); }
+
 function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'), r=toon('#c2473b');
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.245,0.40,7),w));
   const st=new THREE.Mesh(new THREE.CylinderGeometry(0.252,0.252,0.06,7),r); st.position.y=0.04; g.add(st);
@@ -2923,7 +3024,7 @@ function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'),
 function ensureRemote(p,state){ if(remote.has(p.id)) return;
   const remoteName=String(state.n||p.name||'').trim();
   if(!remoteName) return; // wait for identity state instead of flashing a temporary Guest look
-  const g=makeCharacter(appearanceFromName(remoteName));   // keyed on the owner's name → exact look they see for themselves (same on every client)
+  const g=makeCharacter(resolveAppearance(remoteName, state.a));   // name-derived base + their broadcast overrides
   // snap to the real spawn position immediately so they don't fly in from the planet centre
   if(typeof state.x==='number'){ g.position.set(state.x,state.y,state.z); if(typeof state.qw==='number') g.quaternion.set(state.qx,state.qy,state.qz,state.qw); }
   scene.add(g);
@@ -2936,7 +3037,21 @@ function ensureRemote(p,state){ if(remote.has(p.id)) return;
     target:{pos:g.position.clone(),quat:g.quaternion.clone(),phase:initialPhase,direction:state.ad<0?-1:1,
       grounded:state.ag==null?true:!!state.ag,verticalSpeed:Number.isFinite(state.av)?state.av:0}, wp:initialPhase,
     lastFacing:new THREE.Vector3(0,0,1).applyQuaternion(g.quaternion), motionForward:new THREE.Vector3(), motionUp:new THREE.Vector3(), motionCross:new THREE.Vector3(),
-    carry:false, score:0, name:remoteName});
+    carry:false, score:0, name:remoteName, appCode:(typeof state.a==='string'?state.a:'')});
+}
+// Restyle an existing remote in place when their broadcast look (code) changes.
+// Rebuilds the avatar mesh + its attachments; preserves position, motion phase, carry, score, name.
+function rebuildRemoteLook(id, r, code){
+  const pos = r.group.position.clone(), quat = r.group.quaternion.clone(), phase = r.target.phase;
+  scene.remove(r.group);
+  const g = makeCharacter(resolveAppearance(r.name, code));
+  g.position.copy(pos); g.quaternion.copy(quat); scene.add(g);
+  const tag = makeLabel(r.name); tag.position.y = 2.05; g.add(tag);
+  addBlobShadow(g, 0.38);
+  const par = remoteParcelMesh(); par.visible = r.carry; g.add(par);
+  r.group = g; r.parts = g.userData.parts; r.tag = tag; r.parcel = par;
+  r.anim = createCharacterAnimator(g, { seed:id, maxSpeed:MOVE, intensity:0.96, phase });
+  r.appCode = code;
 }
 function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag); r.tag=makeLabel(name); r.tag.position.y=2.05; r.group.add(r.tag); r.name=name; }
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
@@ -2953,7 +3068,8 @@ function setupRoom(){
       if(Number.isFinite(state.ad)) r.target.direction=state.ad<0?-1:1;
       if(Number.isFinite(state.ag)) r.target.grounded=!!state.ag;
       if(Number.isFinite(state.av)) r.target.verticalSpeed=state.av;
-      r.carry=!!state.c; if(state.n) setRemoteName(r,state.n); r.score=state.s||0; } refreshLeaderboardThrottled(); });
+      r.carry=!!state.c; if(state.n) setRemoteName(r,state.n); r.score=state.s||0;
+      if(typeof state.a==='string' && state.a!==r.appCode) rebuildRemoteLook(p.id, r, state.a); } refreshLeaderboardThrottled(); });
   room.on('emote',(payload,from)=>{ const r=remote.get(from); if(r&&payload&&payload.e) spawnEmote(payload.e,r.group); });
   refreshLeaderboard();
 }
@@ -3050,9 +3166,8 @@ function animate(){
   requestAnimationFrame(animate);
   const _now=performance.now(); let dt=Math.min((_now-_last)/1000,0.05); _last=_now;
   if(started){
-    readKeys();
-    updatePlayer(dt);
-    checkInteract();
+    if(customizing){ inputMove=0; inputTurn=0; }
+    else { readKeys(); updatePlayer(dt); checkInteract(); }
   }
   updateCamera(dt);
   updateNpcLife(dt);
@@ -3134,7 +3249,7 @@ let netAcc=0;
 function netSend(dt){ if(!room||!room.me) return; netAcc+=dt; if(netAcc<0.05) return; netAcc=0;
   room.me.setState({ x:+player.position.x.toFixed(2), y:+player.position.y.toFixed(2), z:+player.position.z.toFixed(2),
     qx:+player.quaternion.x.toFixed(3), qy:+player.quaternion.y.toFixed(3), qz:+player.quaternion.z.toFixed(3), qw:+player.quaternion.w.toFixed(3),
-    c:carrying?1:0, n:myName, s:score, ad:inputMove<0?-1:1, ag:grounded?1:0, av:+vVel.toFixed(2), wp:+(walkPhase%6.28).toFixed(2) }); }
+    c:carrying?1:0, n:myName, a:myAppearanceCode, s:score, ad:inputMove<0?-1:1, ag:grounded?1:0, av:+vVel.toFixed(2), wp:+(walkPhase%6.28).toFixed(2) }); }
 
 // ---------------------------------------------------------------
 //  BOOT
@@ -3155,7 +3270,10 @@ const beginBtn=document.getElementById('beginBtn');
 const SHOW_WELCOME_DURING_IMMERSION_QA=true;   // set false to skip the name screen while checking
 beginBtn.addEventListener('click',()=>{
   myName=(document.getElementById('nameInput').value||'').trim().slice(0,14)||('Guest'+randi(1,99));
-  setLocalAppearance(appearanceFromName(myName));   // create the final avatar before revealing the street
+  const base0 = appearanceFromName(myName);         // name-derived starting look
+  myOverrides = { hairStyle:base0.hairStyle, hair:base0.hair, shirt:base0.shirt, accessory:base0.accessory };
+  myAppearanceCode = encodeAppearanceCode(myOverrides);
+  setLocalAppearance(resolveAppearance(myName, myAppearanceCode));   // identical to base0, now driven by the codec
   playerShadow.visible=true;
   document.getElementById('intro').style.display='none';
   started=true; startTime=performance.now();
