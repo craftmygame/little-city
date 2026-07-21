@@ -3024,7 +3024,7 @@ function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'),
 function ensureRemote(p,state){ if(remote.has(p.id)) return;
   const remoteName=String(state.n||p.name||'').trim();
   if(!remoteName) return; // wait for identity state instead of flashing a temporary Guest look
-  const g=makeCharacter(appearanceFromName(remoteName));   // keyed on the owner's name → exact look they see for themselves (same on every client)
+  const g=makeCharacter(resolveAppearance(remoteName, state.a));   // name-derived base + their broadcast overrides
   // snap to the real spawn position immediately so they don't fly in from the planet centre
   if(typeof state.x==='number'){ g.position.set(state.x,state.y,state.z); if(typeof state.qw==='number') g.quaternion.set(state.qx,state.qy,state.qz,state.qw); }
   scene.add(g);
@@ -3037,7 +3037,21 @@ function ensureRemote(p,state){ if(remote.has(p.id)) return;
     target:{pos:g.position.clone(),quat:g.quaternion.clone(),phase:initialPhase,direction:state.ad<0?-1:1,
       grounded:state.ag==null?true:!!state.ag,verticalSpeed:Number.isFinite(state.av)?state.av:0}, wp:initialPhase,
     lastFacing:new THREE.Vector3(0,0,1).applyQuaternion(g.quaternion), motionForward:new THREE.Vector3(), motionUp:new THREE.Vector3(), motionCross:new THREE.Vector3(),
-    carry:false, score:0, name:remoteName});
+    carry:false, score:0, name:remoteName, appCode:(typeof state.a==='string'?state.a:'')});
+}
+// Restyle an existing remote in place when their broadcast look (code) changes.
+// Rebuilds the avatar mesh + its attachments; preserves position, motion phase, carry, score, name.
+function rebuildRemoteLook(id, r, code){
+  const pos = r.group.position.clone(), quat = r.group.quaternion.clone(), phase = r.target.phase;
+  scene.remove(r.group);
+  const g = makeCharacter(resolveAppearance(r.name, code));
+  g.position.copy(pos); g.quaternion.copy(quat); scene.add(g);
+  const tag = makeLabel(r.name); tag.position.y = 2.05; g.add(tag);
+  addBlobShadow(g, 0.38);
+  const par = remoteParcelMesh(); par.visible = r.carry; g.add(par);
+  r.group = g; r.parts = g.userData.parts; r.tag = tag; r.parcel = par;
+  r.anim = createCharacterAnimator(g, { seed:id, maxSpeed:MOVE, intensity:0.96, phase });
+  r.appCode = code;
 }
 function setRemoteName(r,name){ if(r.name===name) return; r.group.remove(r.tag); r.tag=makeLabel(name); r.tag.position.y=2.05; r.group.add(r.tag); r.name=name; }
 function removeRemote(id){ const r=remote.get(id); if(!r) return; scene.remove(r.group); remote.delete(id); }
@@ -3054,7 +3068,8 @@ function setupRoom(){
       if(Number.isFinite(state.ad)) r.target.direction=state.ad<0?-1:1;
       if(Number.isFinite(state.ag)) r.target.grounded=!!state.ag;
       if(Number.isFinite(state.av)) r.target.verticalSpeed=state.av;
-      r.carry=!!state.c; if(state.n) setRemoteName(r,state.n); r.score=state.s||0; } refreshLeaderboardThrottled(); });
+      r.carry=!!state.c; if(state.n) setRemoteName(r,state.n); r.score=state.s||0;
+      if(typeof state.a==='string' && state.a!==r.appCode) rebuildRemoteLook(p.id, r, state.a); } refreshLeaderboardThrottled(); });
   room.on('emote',(payload,from)=>{ const r=remote.get(from); if(r&&payload&&payload.e) spawnEmote(payload.e,r.group); });
   refreshLeaderboard();
 }
@@ -3234,7 +3249,7 @@ let netAcc=0;
 function netSend(dt){ if(!room||!room.me) return; netAcc+=dt; if(netAcc<0.05) return; netAcc=0;
   room.me.setState({ x:+player.position.x.toFixed(2), y:+player.position.y.toFixed(2), z:+player.position.z.toFixed(2),
     qx:+player.quaternion.x.toFixed(3), qy:+player.quaternion.y.toFixed(3), qz:+player.quaternion.z.toFixed(3), qw:+player.quaternion.w.toFixed(3),
-    c:carrying?1:0, n:myName, s:score, ad:inputMove<0?-1:1, ag:grounded?1:0, av:+vVel.toFixed(2), wp:+(walkPhase%6.28).toFixed(2) }); }
+    c:carrying?1:0, n:myName, a:myAppearanceCode, s:score, ad:inputMove<0?-1:1, ag:grounded?1:0, av:+vVel.toFixed(2), wp:+(walkPhase%6.28).toFixed(2) }); }
 
 // ---------------------------------------------------------------
 //  BOOT
