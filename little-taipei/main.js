@@ -2619,6 +2619,7 @@ function updateObjArrow(){
 let camMode='map';                 // intro shows the planet; BEGIN drops to street level
 let camBlend=1;                    // 0 = street … 1 = map (smoothed each frame)
 let camYaw=0, camPitch=0.46;
+let czOrbit = 0;   // turntable angle while the customizer is open
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
 const camUp=new THREE.Vector3(0,1,0);
@@ -2653,6 +2654,7 @@ function camBlockT(from,to){
   return 1;
 }
 function updateCamera(dt){
+  if(customizing){ return updateCustomizeCam(dt); }
   if(window.__freecam) return;   // debug/verification: hold a fixed framed view
   const up=surfDir;
   camKick=Math.max(0,camKick-dt*2.2);
@@ -2706,6 +2708,21 @@ function updateCamera(dt){
   camera.lookAt(look);
 }
 
+// A calm turntable framing the player from the front while the customizer is open.
+function updateCustomizeCam(dt){
+  const up = surfDir;
+  czOrbit += dt * 0.35;                                   // slow orbit
+  const dist = 3.4, pitch = 0.16, lookH = 1.5;
+  // camFollowHeading trails the (idle) runner; +π puts the camera in front to show the face, then orbit.
+  const camF = camFollowHeading.clone().applyAxisAngle(up, Math.PI + czOrbit);
+  const horiz = Math.cos(pitch) * dist, vert = Math.sin(pitch) * dist + lookH;
+  const look = player.position.clone().addScaledVector(up, lookH);
+  const desired = player.position.clone().addScaledVector(camF, -horiz).addScaledVector(up, vert);
+  camera.position.lerp(desired, 1 - Math.exp(-dt * 6));   // ease in on open, orbit while open
+  camUp.lerp(up, 1 - Math.exp(-dt * 8)).normalize(); camera.up.copy(camUp);
+  camera.lookAt(look);
+}
+
 // ---------------------------------------------------------------
 //  INPUT
 // ---------------------------------------------------------------
@@ -2726,7 +2743,7 @@ function readKeys(){
   if(m||t){ inputMove=m; inputTurn=t; }
   else if(!touchActive){ inputMove=0; inputTurn=0; }
 }
-function tryJump(){ if(grounded && started){ vVel=JUMP; grounded=false; doSquash(0.96,1.04); sfxJump(); } }
+function tryJump(){ if(grounded && started && !customizing){ vVel=JUMP; grounded=false; doSquash(0.96,1.04); sfxJump(); } }
 
 // Pointer movement only distinguishes a click from a drag. The street shot is
 // intentionally authored like Abeto: yaw follows the runner and pitch is fixed.
@@ -2993,7 +3010,8 @@ function buildCustomizePanel(){
   tw(body);   // twemojify the accessory emoji labels
 }
 
-function openCustomize(){ customizing=true; document.getElementById('customize').classList.add('show');
+function openCustomize(){ customizing=true; czOrbit=0;   // always start the turntable facing the character's front
+  document.getElementById('customize').classList.add('show');
   document.getElementById('customize').setAttribute('aria-hidden','false'); document.body.classList.remove('menuOpen'); buildCustomizePanel(); }
 function closeCustomize(){ customizing=false; document.getElementById('customize').classList.remove('show');
   document.getElementById('customize').setAttribute('aria-hidden','true'); }
@@ -3133,9 +3151,8 @@ function animate(){
   requestAnimationFrame(animate);
   const _now=performance.now(); let dt=Math.min((_now-_last)/1000,0.05); _last=_now;
   if(started){
-    readKeys();
-    updatePlayer(dt);
-    checkInteract();
+    if(customizing){ inputMove=0; inputTurn=0; }
+    else { readKeys(); updatePlayer(dt); checkInteract(); }
   }
   updateCamera(dt);
   updateNpcLife(dt);
