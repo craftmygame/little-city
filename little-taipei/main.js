@@ -2692,14 +2692,14 @@ function updateCameraControlCopy(){
             ? '<span>left thumb — move</span><span>drag left/right — peek</span><span>✋ — interact</span>'
             : '<span>left thumb — move</span><span>camera — follows runner</span><span>✋ — interact</span>'))))
     : (freeLook
-      ? '<span>WASD / Arrows — move</span><span>Drag — look around</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+      ? '<span>WASD / Arrows — move</span><span>Drag — look around</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
       : (lessFreeLook
-        ? '<span>WASD / Arrows — move</span><span>Drag — restrained look</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+        ? '<span>WASD / Arrows — move</span><span>Drag — restrained look</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
         : (pitchLook
-          ? '<span>WASD / Arrows — move</span><span>Drag up/down — camera height</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+          ? '<span>WASD / Arrows — move</span><span>Drag up/down — camera height</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
           : (yawLook
-            ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
-            : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'))));
+            ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
+            : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'))));
   const prototype=pitchLook||yawLook;
   cameraPrototypeLabelEl.textContent=cameraPreviewEnabled
     ? 'Camera rig · dev'
@@ -2923,7 +2923,7 @@ setupTouch();
 // prompt + toast helpers
 const promptEl=document.getElementById('prompt'), promptTxt=document.getElementById('promptTxt'), promptKey=document.getElementById('promptKey');
 let _lastPrompt='';
-function showPrompt(t){ const key=isTouch()?'🤝':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); document.getElementById('btnAct').classList.add('ready'); }
+function showPrompt(t){ const key=isTouch()?'💬':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); document.getElementById('btnAct').classList.add('ready'); }
 function hidePrompt(){ promptEl.classList.remove('show'); document.getElementById('btnAct').classList.remove('ready'); }
 const toastEl=document.getElementById('toast');
 let toastT=0;
