@@ -1437,14 +1437,16 @@ function buildStreetLayer(){
   const N=slots.length;
   window.__streetTrees=N;
   if(N){
-    const trunkGeo=faceted(new THREE.CylinderGeometry(0.075,0.11,1.82,7)); trunkGeo.translate(0,0.91,0);
+    // The lowest crown lobe starts at ~2.09u. Let the visible trunk overlap it
+    // slightly: the former 1.82u trunk left a literal floating-crown gap.
+    const trunkGeo=faceted(new THREE.CylinderGeometry(0.10,0.15,2.16,7)); trunkGeo.translate(0,1.08,0);
     const canopyGeo=(()=>{                                // layered blob silhouette (merged, still instanced)
       const a=new THREE.IcosahedronGeometry(0.52,1); a.scale(1.14,0.82,1.14); a.translate(0,2.52,0);
       const b=new THREE.IcosahedronGeometry(0.42,1); b.scale(1.06,0.82,1.06); b.translate(0.20,2.84,0.06);
       const c=new THREE.IcosahedronGeometry(0.34,1); c.scale(1.0,0.78,1.0); c.translate(-0.27,2.72,-0.08);
       return faceted(mergeGeometries([a,b,c],false));
     })();
-    const trunks=new THREE.InstancedMesh(trunkGeo, toon('#a59a80'), N);
+    const trunks=new THREE.InstancedMesh(trunkGeo, toon('#76604a'), N);
     const canopies=new THREE.InstancedMesh(canopyGeo, toon('#ffffff'), N);
     trunks.frustumCulled=canopies.frustumCulled=false;
     const colArr=new Float32Array(N*3);
