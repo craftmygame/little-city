@@ -82,11 +82,12 @@
   .tbtn .lbl{font-size:10px;line-height:1;letter-spacing:.05em;text-transform:uppercase;opacity:.72;}
   #btnAct{right:26px;bottom:96px;background:var(--sun);display:none;}
   #btnJump{right:118px;bottom:40px;}
-  #btnEmote{right:30px;bottom:188px;width:62px;height:62px;display:none;}
+  #btnEmote{position:fixed;z-index:8;cursor:pointer;right:30px;bottom:188px;width:62px;height:62px;display:none;}
   #btnEmote .ic{font-size:22px;}
   /* contextual buttons — solo screens stay just joystick + HOP:
      TALK pops in (and beckons) beside a neighbour or the observatory lift,
-     REACT only while another player is in town (.social set by updatePlayerCount) */
+     REACT only while another player is in town (.social set by updatePlayerCount).
+     REACT sits outside #touch (position:fixed) so desktop screens show it too. */
   #btnAct.ready{display:flex;animation:popIn .18s ease-out,beckon 1s ease-in-out .18s infinite;}
   #btnEmote.social{display:flex;animation:popIn .18s ease-out;}
   @keyframes beckon{0%,100%{transform:scale(1);}50%{transform:scale(1.09);}}
@@ -94,9 +95,13 @@
 
   /* ---------- emote wheel ---------- */
   #emotes{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);display:none;gap:8px;z-index:13;pointer-events:auto;}
-  #emotes button{width:54px;height:54px;font-size:26px;border-radius:50%;border:3px solid #fff;
+  #emotes button{position:relative;width:54px;height:54px;font-size:26px;border-radius:50%;border:3px solid #fff;
     background:rgba(255,255,255,.92);box-shadow:0 5px 0 rgba(0,0,0,.14);cursor:pointer;}
   #emotes button:active{transform:translateY(3px);}
+  /* keyboard keycap hint — only rendered on fine-pointer screens (see main.js) */
+  #emotes button .k{position:absolute;top:-7px;left:-7px;font-style:normal;font-size:11px;line-height:1;
+    font-weight:700;color:var(--ink);background:#fff;border-radius:9px;padding:2px 5px;
+    box-shadow:0 2px 0 rgba(0,0,0,.12);}
 
   /* ---------- overlays ---------- */
   .overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;

@@ -2880,7 +2880,7 @@ addEventListener('pointermove',e=>{ if(!dragging) return;
   }
   lastX=e.clientX; lastY=e.clientY;
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>6){ movedFar=true; if(customizing) czManual=true; } });
-addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')){ if(customizing) closeCustomize(); else doInteract(); } dragging=false; });
+addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#btnEmote,#emotes,.iconbtn,.bigbtn,#customize')){ if(customizing) closeCustomize(); else doInteract(); } dragging=false; });
 // wheel zoom — in-zone zoom, with a mode flip at the end of each zone
 addEventListener('wheel',e=>{
   const d=e.deltaY*0.012;
@@ -2936,7 +2936,10 @@ function updateToast(dt){ if(toastT>0){ toastT-=dt; if(toastT<=0){ toastEl.style
 // ---------------------------------------------------------------
 const EMOJIS=['👋','😊','💛','🧋','🥟','🎉','😋','🙏','🌟'];
 const emoteBar=document.getElementById('emotes');
-EMOJIS.forEach(em=>{ const b=document.createElement('button'); b.textContent=em; b.onclick=()=>{ doEmote(em); toggleEmotes(false); }; emoteBar.appendChild(b); });
+EMOJIS.forEach((em,i)=>{ const b=document.createElement('button'); b.textContent=em;
+  // keycap hint appears only when the wheel opens (via REACT) — and only where a keyboard exists
+  if(!isTouch()){ const k=document.createElement('i'); k.className='k'; k.textContent=i+1; b.appendChild(k); }
+  b.onclick=()=>{ doEmote(em); toggleEmotes(false); }; emoteBar.appendChild(b); });
 let emotesOpen=false;
 function toggleEmotes(force){ emotesOpen = force===undefined?!emotesOpen:force; emoteBar.style.display=emotesOpen?'flex':'none'; }
 const liveEmotes=[];
