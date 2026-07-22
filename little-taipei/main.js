@@ -2375,6 +2375,7 @@ function checkInteract(){
   _wasNear=near;
 }
 function doInteract(){
+  if(customizing) return;   // no hidden pickups/deliveries behind the dress-up panel
   if(obsNear){ rideObservatory(obsNear==='up'); obsNear=null; hidePrompt(); return; }
   if(!nearTarget) return;
   if(carrying && nearTarget===recipient) deliver();
@@ -2621,6 +2622,7 @@ let camMode='map';                 // intro shows the planet; BEGIN drops to str
 let camBlend=1;                    // 0 = street … 1 = map (smoothed each frame)
 let camYaw=0, camPitch=0.46;
 let czOrbit = 0;   // turntable angle while the customizer is open
+let czManual = false;  // player grabbed the spin — stop the auto-orbit until reopened
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
 const CAMERA_CONTROL_MODES=['locked','pitch-look','yaw-look','less-freelook','freelook'];
@@ -2690,14 +2692,14 @@ function updateCameraControlCopy(){
             ? '<span>left thumb — move</span><span>drag left/right — peek</span><span>✋ — interact</span>'
             : '<span>left thumb — move</span><span>camera — follows runner</span><span>✋ — interact</span>'))))
     : (freeLook
-      ? '<span>WASD / Arrows — move</span><span>Drag — look around</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+      ? '<span>WASD / Arrows — move</span><span>Drag — look around</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
       : (lessFreeLook
-        ? '<span>WASD / Arrows — move</span><span>Drag — restrained look</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+        ? '<span>WASD / Arrows — move</span><span>Drag — restrained look</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
         : (pitchLook
-          ? '<span>WASD / Arrows — move</span><span>Drag up/down — camera height</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
+          ? '<span>WASD / Arrows — move</span><span>Drag up/down — camera height</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
           : (yawLook
-            ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
-            : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'))));
+            ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'
+            : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 💬</span><span>Wheel — map view</span>'))));
   const prototype=pitchLook||yawLook;
   cameraPrototypeLabelEl.textContent=cameraPreviewEnabled
     ? 'Camera rig · dev'
@@ -2814,14 +2816,21 @@ function updateCamera(dt){
 }
 
 // A calm turntable framing the player from the front while the customizer is open.
+const czSheet = matchMedia('(max-width:620px)');  // matches the bottom-sheet breakpoint in styles.css
 function updateCustomizeCam(dt){
   const up = surfDir;
-  czOrbit += dt * 0.35;                                   // slow orbit
-  const dist = 3.4, pitch = 0.16, lookH = 1.5;
+  if(!czManual) czOrbit += dt * 0.35;                     // slow orbit until the player drags to spin
+  // On phones the panel is a bottom sheet; measure the fraction it covers so the
+  // player frames mid-body in the uncovered band, whatever the screen/content size.
+  const f = czSheet.matches ? document.getElementById('customize').offsetHeight / innerHeight : 0;
+  const tanF = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  // Back off until ~2.5 world units (character + margin) fit in the band.
+  const dist = Math.max(3.4, 1.25 / ((1 - f) * tanF)), pitch = 0.16, lookH = 1.5;
   // camFollowHeading trails the (idle) runner; +π puts the camera in front to show the face, then orbit.
   const camF = camFollowHeading.clone().applyAxisAngle(up, Math.PI + czOrbit);
   const horiz = Math.cos(pitch) * dist, vert = Math.sin(pitch) * dist + lookH;
-  const look = player.position.clone().addScaledVector(up, lookH);
+  // Aim so the band's center (NDC y = f) lands on the character's mid-body.
+  const look = player.position.clone().addScaledVector(up, f ? 0.95 - f * tanF * dist : lookH);
   const desired = player.position.clone().addScaledVector(camF, -horiz).addScaledVector(up, vert);
   camera.position.lerp(desired, 1 - Math.exp(-dt * 6));   // ease in on open, orbit while open
   camUp.lerp(up, 1 - Math.exp(-dt * 8)).normalize(); camera.up.copy(camUp);
@@ -2858,16 +2867,20 @@ renderer.domElement.addEventListener('pointerdown',e=>{ if(e.target.closest('#to
   dragging=true; lastX=e.clientX; lastY=e.clientY; downX=e.clientX; downY=e.clientY; movedFar=false; });
 addEventListener('pointermove',e=>{ if(!dragging) return;
   const dx=e.clientX-lastX, dy=e.clientY-lastY;
-  if(allowsYawLook()){
-    camYaw+=dx*(isLessFreeLook()?0.004:0.006);
-    if(isLessFreeLook()) camYaw=THREE.MathUtils.clamp(camYaw,-LESS_FREELOOK_YAW_LIMIT,LESS_FREELOOK_YAW_LIMIT);
-  }
-  if(allowsPitchLook()){
-    camPitch=THREE.MathUtils.clamp(camPitch-dy*(isLessFreeLook()?0.0033:0.005),0.02,cameraPitchInputMax());
+  if(customizing){
+    czOrbit+=dx*0.01;                    // drag spins the dress-up turntable
+  } else {
+    if(allowsYawLook()){
+      camYaw+=dx*(isLessFreeLook()?0.004:0.006);
+      if(isLessFreeLook()) camYaw=THREE.MathUtils.clamp(camYaw,-LESS_FREELOOK_YAW_LIMIT,LESS_FREELOOK_YAW_LIMIT);
+    }
+    if(allowsPitchLook()){
+      camPitch=THREE.MathUtils.clamp(camPitch-dy*(isLessFreeLook()?0.0033:0.005),0.02,cameraPitchInputMax());
+    }
   }
   lastX=e.clientX; lastY=e.clientY;
-  if(Math.hypot(e.clientX-downX,e.clientY-downY)>6) movedFar=true; });
-addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')) doInteract(); dragging=false; });
+  if(Math.hypot(e.clientX-downX,e.clientY-downY)>6){ movedFar=true; if(customizing) czManual=true; } });
+addEventListener('pointerup',e=>{ if(dragging && !movedFar && started && !e.target.closest('#touch,#emotes,.iconbtn,.bigbtn,#customize')){ if(customizing) closeCustomize(); else doInteract(); } dragging=false; });
 // wheel zoom — in-zone zoom, with a mode flip at the end of each zone
 addEventListener('wheel',e=>{
   const d=e.deltaY*0.012;
@@ -2910,7 +2923,7 @@ setupTouch();
 // prompt + toast helpers
 const promptEl=document.getElementById('prompt'), promptTxt=document.getElementById('promptTxt'), promptKey=document.getElementById('promptKey');
 let _lastPrompt='';
-function showPrompt(t){ const key=isTouch()?'🤝':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); document.getElementById('btnAct').classList.add('ready'); }
+function showPrompt(t){ const key=isTouch()?'💬':'E'; const sig=t+'|'+key; if(sig!==_lastPrompt){ promptTxt.textContent=t; promptKey.textContent=key; tw(promptEl); _lastPrompt=sig; } promptEl.classList.add('show'); document.getElementById('btnAct').classList.add('ready'); }
 function hidePrompt(){ promptEl.classList.remove('show'); document.getElementById('btnAct').classList.remove('ready'); }
 const toastEl=document.getElementById('toast');
 let toastT=0;
@@ -3123,11 +3136,13 @@ function buildCustomizePanel(){
   tw(body);   // twemojify the accessory emoji labels
 }
 
-function openCustomize(){ customizing=true; czOrbit=0;   // always start the turntable facing the character's front
+function openCustomize(){ customizing=true; czOrbit=0; czManual=false;   // always start the turntable facing the character's front
+  touchEl.style.display='none';   // free the whole visible band for drag-to-spin (gameplay input is gated anyway)
   document.getElementById('customize').classList.add('show');
   document.getElementById('customize').setAttribute('aria-hidden','false'); document.body.classList.remove('menuOpen'); buildCustomizePanel(); }
 function closeCustomize(){ customizing=false; document.getElementById('customize').classList.remove('show');
-  document.getElementById('customize').setAttribute('aria-hidden','true'); }
+  document.getElementById('customize').setAttribute('aria-hidden','true');
+  if(isTouch()) touchEl.style.display='block'; }
 
 function remoteParcelMesh(){ const g=new THREE.Group(); const w=toon('#f4f1e6'), r=toon('#c2473b');
   g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.205,0.245,0.40,7),w));
@@ -3188,7 +3203,10 @@ function setupRoom(){
 }
 function updatePlayerCount(){ const n=room? Math.max(1,room.players.length) : 1;
   const el=document.getElementById('playerCount'); if(el) el.textContent=n;
-  const pp=document.getElementById('players'); if(pp) pp.classList.toggle('multi',n>1); }
+  const pp=document.getElementById('players'); if(pp) pp.classList.toggle('multi',n>1);
+  // REACT only earns a spot on screen when there's someone to wave at
+  document.getElementById('btnEmote').classList.toggle('social',n>1);
+  if(n<=1) toggleEmotes(false); }
 let _lbT=0;
 function refreshLeaderboardThrottled(){ const n=performance.now(); if(n-_lbT<1000) return; _lbT=n; refreshLeaderboard(); }
 function refreshLeaderboard(){ if(!room) return;
