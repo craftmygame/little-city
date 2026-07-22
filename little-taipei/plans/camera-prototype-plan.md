@@ -166,6 +166,11 @@ touch paths. There is no second renderer, camera, or movement system.
   `window.__cameraControls('freelook')` (or either other mode) switches it for
   quick developer checks. `window.__cam` and `window.__camMode` remain the
   existing framing/zoom helpers.
+- Add `?camera-preview` to any of those URLs to show the in-world **Camera rig ·
+  dev** strip. Its three buttons deliberately present the original comparison
+  set — Locked, Pitch, Free restrained, and Free — and update the `camera` URL
+  parameter without reloading. The strip is opt-in so normal play and any
+  future settings design remain untouched.
 
 Non-default modes show a small “Camera prototype” label. `pitch-look` accepts
 only vertical drag; `yaw-look` accepts only horizontal drag; `less-freelook`

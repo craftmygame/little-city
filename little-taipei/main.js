@@ -2622,7 +2622,9 @@ let czOrbit = 0;   // turntable angle while the customizer is open
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
 const CAMERA_CONTROL_MODES=['locked','pitch-look','yaw-look','less-freelook','freelook'];
-const requestedCameraMode=new URLSearchParams(location.search).get('camera');
+const cameraSearchParams=new URLSearchParams(location.search);
+const requestedCameraMode=cameraSearchParams.get('camera');
+const cameraPreviewEnabled=cameraSearchParams.has('camera-preview');
 let cameraControlMode=CAMERA_CONTROL_MODES.includes(requestedCameraMode)?requestedCameraMode:'locked';
 const camUp=new THREE.Vector3(0,1,0);
 const camFollowHeading=heading.clone();
@@ -2633,6 +2635,9 @@ const _camP=new THREE.Vector3(), _camSeg=new THREE.Vector3(), _camDir=new THREE.
 const _camTestHeading=new THREE.Vector3(), _camCandidate=new THREE.Vector3();
 const CAM_AVOID_ANGLES=[0,0.24,-0.24,0.48,-0.48,0.72,-0.72,0.96,-0.96,1.20,-1.20,1.44,-1.44];
 const cameraPrototypeEl=document.getElementById('cameraPrototype');
+const cameraPrototypeLabelEl=document.getElementById('cameraPrototypeLabel');
+const cameraModePickerEl=document.getElementById('cameraModePicker');
+document.body.classList.toggle('cameraPreview',cameraPreviewEnabled);
 const CAMERA_CONTROL_LABELS={
   locked:'Locked follow',
   'pitch-look':'Pitch-look follow',
@@ -2689,8 +2694,15 @@ function updateCameraControlCopy(){
             ? '<span>WASD / Arrows — move</span><span>Drag left/right — peek</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'
             : '<span>WASD / Arrows — move</span><span>Camera — locked follow</span><span>Space — hop 🐸</span><span>E / Click — talk 🤝</span><span>Wheel — map view</span>'))));
   const prototype=pitchLook||yawLook;
-  cameraPrototypeEl.textContent=prototype?'Camera prototype · '+CAMERA_CONTROL_LABELS[cameraControlMode]:'';
-  cameraPrototypeEl.classList.toggle('show',prototype);
+  cameraPrototypeLabelEl.textContent=cameraPreviewEnabled
+    ? 'Camera rig · dev'
+    : (prototype?'Camera prototype · '+CAMERA_CONTROL_LABELS[cameraControlMode]:'');
+  cameraPrototypeEl.classList.toggle('show',cameraPreviewEnabled||prototype);
+  cameraPrototypeEl.classList.toggle('preview',cameraPreviewEnabled);
+  cameraModePickerEl.querySelectorAll('[data-camera-mode]').forEach(button=>{
+    const selected=button.dataset.cameraMode===cameraControlMode;
+    button.setAttribute('aria-pressed',String(selected));
+  });
 }
 function setCameraControlMode(mode){
   cameraControlMode=CAMERA_CONTROL_MODES.includes(mode)?mode:'locked';
@@ -2698,6 +2710,15 @@ function setCameraControlMode(mode){
   updateCameraControlCopy();
   return cameraControlMode;
 }
+if(cameraPreviewEnabled) cameraModePickerEl.addEventListener('click',event=>{
+  const button=event.target.closest('[data-camera-mode]');
+  if(!button) return;
+  const mode=button.dataset.cameraMode;
+  setCameraControlMode(mode);
+  const url=new URL(location.href);
+  url.searchParams.set('camera',mode);
+  history.replaceState(null,'',url);
+});
 // debug/verification override (bypasses zoom clamps): d<=8 targets street mode, else map
 window.__cam=(d,p,y)=>{ if(d!=null){ if(d>8){ camMode='map'; mapDist=d; } else { camMode='street'; streetDist=d; } }
   if(p!=null)camPitch=p; if(y!=null)camYaw=y; return {camMode,streetDist,mapDist,camPitch,camYaw,camAvoidYaw}; };

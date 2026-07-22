@@ -33,9 +33,17 @@
     pointer-events:none;z-index:9;transition:opacity .2s;filter:drop-shadow(0 3px 0 rgba(0,0,0,.18));}
   #players{flex:none;font-size:16px;display:flex;align-items:center;gap:8px;height:48px;}
   #players .dot{width:11px;height:11px;border-radius:50%;background:#62d07a;box-shadow:0 0 0 3px rgba(98,208,122,.3);flex:none;}
-  #cameraPrototype{position:fixed;left:14px;top:calc(72px + env(safe-area-inset-top));z-index:10;
-    display:none;padding:6px 10px;border-radius:12px;font-size:12px;color:#60706e;pointer-events:none;}
+  #cameraPrototype{position:fixed;left:14px;bottom:14px;z-index:10;
+    display:none;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;font-size:12px;color:#60706e;pointer-events:none;}
   #cameraPrototype.show{display:block;}
+  #cameraPrototype.preview{display:flex;pointer-events:auto;}
+  #cameraModePicker{display:none;gap:4px;}
+  #cameraPrototype.preview #cameraModePicker{display:flex;}
+  #cameraModePicker button{appearance:none;border:0;border-radius:8px;background:#e7efed;color:#526361;
+    padding:4px 7px;font:700 11px/1 'Fredoka',system-ui,sans-serif;cursor:pointer;}
+  #cameraModePicker button:hover{background:#d9e7e4;}
+  #cameraModePicker button[aria-pressed="true"]{background:var(--teal);color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.14);}
+  #cameraModePicker button:focus-visible{outline:3px solid var(--sun);outline-offset:2px;}
 
   #prompt{position:fixed;left:50%;bottom:135px;transform:translateX(-50%);
     background:var(--ink);color:#fff;padding:9px 18px;border-radius:30px;font-weight:600;font-size:16px;
@@ -132,6 +140,8 @@
     background:rgba(255,255,255,.8);border-radius:12px;padding:7px 12px;border:2px solid #fff;display:none;
     pointer-events:auto;cursor:pointer;font-weight:600;}
   #roomline.on{display:block;}
+  /* The opt-in camera strip owns the lower-left slot during rig review. */
+  body.cameraPreview #roomline.on{bottom:56px;}
   #githubHelp{position:fixed;right:14px;bottom:14px;z-index:11;pointer-events:auto;display:grid;
     grid-template-columns:auto 1fr;align-items:center;gap:10px;width:min(340px,calc(100vw - 28px));padding:10px 13px;border:2px solid #fff;border-radius:14px;
     background:rgba(255,255,255,.86);color:var(--ink);box-shadow:0 5px 0 rgba(0,0,0,.12),inset 0 1px 0 rgba(255,255,255,.72);
@@ -160,7 +170,9 @@
     #players .dot{width:9px;height:9px;}
     #objective{font-size:12px;padding:5px 10px;gap:6px;background:rgba(255,255,255,.72);}
     #objective .pin{font-size:15px;}
-    #cameraPrototype{left:8px;top:calc(56px + env(safe-area-inset-top));font-size:11px;padding:4px 8px;}
+    #cameraPrototype{left:8px;bottom:calc(8px + env(safe-area-inset-bottom));font-size:11px;padding:4px 8px;gap:5px;}
+    #cameraModePicker{gap:3px;}
+    #cameraModePicker button{padding:3px 5px;font-size:10px;}
     #objArrow{top:calc(64px + env(safe-area-inset-top));width:40px;height:40px;}
     /* everything secondary lives behind ☰ — opens a labelled menu */
     #btnMenu{display:flex;width:40px;height:auto;min-height:40px;font-size:18px;border-radius:12px;

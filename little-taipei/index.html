@@ -26,7 +26,15 @@
     <div id="btnDress" class="iconbtn" title="Customize your look"><span class="ic">🎨</span><span class="lbl">Look</span></div>
     <div id="btnMenu" class="iconbtn" title="Menu"><span class="ic">☰</span></div>
   </div>
-  <div id="cameraPrototype" class="panel" aria-live="polite"></div>
+  <div id="cameraPrototype" class="panel" aria-live="polite">
+    <span id="cameraPrototypeLabel"></span>
+    <div id="cameraModePicker" role="group" aria-label="Camera rig preview">
+      <button type="button" data-camera-mode="locked">Locked</button>
+      <button type="button" data-camera-mode="pitch-look">Pitch</button>
+      <button type="button" data-camera-mode="less-freelook">Free restrained</button>
+      <button type="button" data-camera-mode="freelook">Free</button>
+    </div>
+  </div>
   <svg id="objArrow" viewBox="0 0 100 100"><path d="M50 6 L74 64 L50 50 L26 64 Z" fill="#e9785b" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></svg>
   <div id="lb" class="panel"><h3>🏮 Top Runners</h3><ol id="lbList"></ol></div>
   <div id="roomline">💌 invite friends</div>
