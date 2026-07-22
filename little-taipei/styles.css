@@ -80,13 +80,17 @@
   .tbtn:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(0,0,0,.14);}
   .tbtn .ic{font-size:26px;line-height:1;}
   .tbtn .lbl{font-size:10px;line-height:1;letter-spacing:.05em;text-transform:uppercase;opacity:.72;}
-  #btnAct{right:26px;bottom:96px;background:var(--sun);}
+  #btnAct{right:26px;bottom:96px;background:var(--sun);display:none;}
   #btnJump{right:118px;bottom:40px;}
-  #btnEmote{right:30px;bottom:188px;width:62px;height:62px;}
+  #btnEmote{right:30px;bottom:188px;width:62px;height:62px;display:none;}
   #btnEmote .ic{font-size:22px;}
-  /* the TALK button beckons when a neighbour is close enough */
-  #btnAct.ready{animation:beckon 1s ease-in-out infinite;}
+  /* contextual buttons — solo screens stay just joystick + HOP:
+     TALK pops in (and beckons) beside a neighbour or the observatory lift,
+     REACT only while another player is in town (.social set by updatePlayerCount) */
+  #btnAct.ready{display:flex;animation:popIn .18s ease-out,beckon 1s ease-in-out .18s infinite;}
+  #btnEmote.social{display:flex;animation:popIn .18s ease-out;}
   @keyframes beckon{0%,100%{transform:scale(1);}50%{transform:scale(1.09);}}
+  @keyframes popIn{from{transform:scale(.55);opacity:0;}to{transform:scale(1);opacity:1;}}
 
   /* ---------- emote wheel ---------- */
   #emotes{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);display:none;gap:8px;z-index:13;pointer-events:auto;}
@@ -199,8 +203,9 @@
     #githubHelp .helpTitle{font-size:11px;line-height:1.2;}
     /* right-edge action stack — labelled so newcomers know what they do */
     .tbtn{border-radius:16px;border-width:2px;background:rgba(255,255,255,.85);box-shadow:0 3px 0 rgba(0,0,0,.12);}
-    #btnAct{width:60px;height:60px;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));background:var(--sun);}
-    #btnJump{width:60px;height:60px;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));}
+    /* HOP anchors the corner (always visible); TALK pops in above it when in range */
+    #btnJump{width:60px;height:60px;right:12px;bottom:calc(24px + env(safe-area-inset-bottom));}
+    #btnAct{width:60px;height:60px;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));background:var(--sun);}
     #btnEmote{width:52px;height:52px;right:16px;bottom:calc(172px + env(safe-area-inset-bottom));}
     .tbtn .ic{font-size:22px;}
     #btnEmote .ic{font-size:18px;}
@@ -228,3 +233,14 @@
   #customize .czSwatch{width:28px;height:28px;padding:0;border-radius:50%;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);}
   #customize .czSwatch.on{box-shadow:0 0 0 3px var(--ink),inset 0 0 0 1px rgba(255,255,255,.5);}
+
+  /* On phones the panel becomes a bottom sheet so the character stays visible
+     above it — the customize camera frames the player in the uncovered band. */
+  @media (max-width:620px){
+    #customize{top:auto;left:0;right:0;bottom:0;width:100%;max-height:44vh;
+      border-radius:18px 18px 0 0;border-bottom:none;
+      padding:10px 16px calc(12px + env(safe-area-inset-bottom));}
+    #customize .czRow button{padding:5px 9px;font-size:12px;}
+    #customize .czSwatch{width:26px;height:26px;}
+    #customize .czLabel{margin:8px 0 4px;}
+  }
