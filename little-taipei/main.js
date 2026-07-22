@@ -2343,7 +2343,7 @@ function deliver(){
   const th=pick(THANKS);
   tossParcel(handPos, rpos.clone().addScaledVector(rUp,1.1), ()=>{ shockwave(rpos,'#ffe49a'); burst(rpos); sfxCatch(); showSpeech(_rg, th[0], 2.6, {emoji:th[1]}); });
   score++; const sv=document.getElementById('scoreVal'); sv.textContent=score; sv.classList.remove('pop'); void sv.offsetWidth; sv.classList.add('pop');
-  camKick=0.7; sfxDeliver(); toast('🥡 Nice run! +1');
+  sfxDeliver(); toast('🥡 Nice run! +1');
   if(room) trySubmitScore();
   setTimeout(newQuest, 700);
   recipient=null; sender=null;
@@ -2461,7 +2461,7 @@ function updateBursts(dt){
 }
 
 // ---- JUICE: rings, parcel toss, squash, dust, camera kick ----
-let camKick=0, parcelPopT=-1, squashT=-1, squashSX=1, squashSY=1, gtCool=4;
+let parcelPopT=-1, squashT=-1, squashSX=1, squashSY=1, gtCool=4;
 function doSquash(sx,sy){ squashT=0; squashSX=sx; squashSY=sy; }
 const dotTex=(()=>{ const cv=document.createElement('canvas'); cv.width=cv.height=64; const cx=cv.getContext('2d');
   // flat-filled circle (cel FX — no radial gradient)
@@ -2622,10 +2622,12 @@ let czOrbit = 0;   // turntable angle while the customizer is open
 let streetDist=3.6, mapDist=21.0;                  // same screen framing around the human-scaled avatar
 const STREET_MIN=3.05, STREET_MAX=4.90, MAP_MIN=13.0, MAP_MAX=38.0;
 const CAMERA_CONTROL_MODES=['locked','pitch-look','yaw-look','less-freelook','freelook'];
+// Dev-only camera flags share the `cam` prefix — see README "Dev URL flags".
 const cameraSearchParams=new URLSearchParams(location.search);
-const requestedCameraMode=cameraSearchParams.get('camera');
-const cameraPreviewEnabled=cameraSearchParams.has('camera-preview');
+const requestedCameraMode=cameraSearchParams.get('cam');
+const cameraPreviewEnabled=cameraSearchParams.has('cam-preview');
 let cameraControlMode=CAMERA_CONTROL_MODES.includes(requestedCameraMode)?requestedCameraMode:'locked';
+const CAM_FOLLOW_MAX_RAD=1.5;  // ~86°/s cap on the auto-follow spin (turn itself is 2.6)
 const camUp=new THREE.Vector3(0,1,0);
 const camFollowHeading=heading.clone();
 const camLook=player.position.clone().addScaledVector(surfDir,1.63);
@@ -2633,6 +2635,7 @@ let camAvoidYaw=0;                 // automatic shoulder slide around nearby fac
 let camPull=1;                     // smoothed occlusion pull-in (fraction of desired dist)
 const _camP=new THREE.Vector3(), _camSeg=new THREE.Vector3(), _camDir=new THREE.Vector3(), _camLookGoal=new THREE.Vector3();
 const _camTestHeading=new THREE.Vector3(), _camCandidate=new THREE.Vector3();
+const _camPrevFollow=new THREE.Vector3(), _camSwing=new THREE.Vector3();
 const CAM_AVOID_ANGLES=[0,0.24,-0.24,0.48,-0.48,0.72,-0.72,0.96,-0.96,1.20,-1.20,1.44,-1.44];
 const cameraPrototypeEl=document.getElementById('cameraPrototype');
 const cameraPrototypeLabelEl=document.getElementById('cameraPrototypeLabel');
@@ -2716,7 +2719,7 @@ if(cameraPreviewEnabled) cameraModePickerEl.addEventListener('click',event=>{
   const mode=button.dataset.cameraMode;
   setCameraControlMode(mode);
   const url=new URL(location.href);
-  url.searchParams.set('camera',mode);
+  url.searchParams.set('cam',mode);
   history.replaceState(null,'',url);
 });
 // debug/verification override (bypasses zoom clamps): d<=8 targets street mode, else map
@@ -2747,26 +2750,36 @@ function updateCamera(dt){
   if(customizing){ return updateCustomizeCam(dt); }
   if(window.__freecam) return;   // debug/verification: hold a fixed framed view
   const up=surfDir;
-  camKick=Math.max(0,camKick-dt*2.2);
   const tgt=camMode==='map'?1:0;
   camBlend+=(tgt-camBlend)*Math.min(1,dt*3.5); if(Math.abs(camBlend-tgt)<0.003) camBlend=tgt;
   const b=camBlend;
   const pitch=THREE.MathUtils.lerp(
     THREE.MathUtils.clamp(camPitch,0.02,streetPitchMax()), // street: near eye-level, or a bounded test pitch
     THREE.MathUtils.clamp(camPitch,0.25,1.25), b);    // map: classic drone
-  const dist=THREE.MathUtils.lerp(streetDist,mapDist,b)-camKick;
+  const dist=THREE.MathUtils.lerp(streetDist,mapDist,b);
   const fov=THREE.MathUtils.lerp(58,55,b);
   scene.fog.near=THREE.MathUtils.lerp(42,90,b);        // street: painted depth cueing
   scene.fog.far =THREE.MathUtils.lerp(175,300,b);      // map: the whole planet reads
   if(Math.abs(camera.fov-fov)>0.01){ camera.fov=fov; camera.updateProjectionMatrix(); }
   // The rig is input-locked but not static: heading trails the runner, the look
   // point has its own damping, and speed contributes a restrained look-ahead.
+  _camPrevFollow.copy(camFollowHeading);
   camFollowHeading.lerp(heading, 1-Math.exp(-dt*5.5));
   camFollowHeading.addScaledVector(up,-camFollowHeading.dot(up));
   if(camFollowHeading.lengthSq()<1e-6) camFollowHeading.copy(heading);
   camFollowHeading.normalize();
+  // Cap the auto-follow spin — sharp turns can't whirl the whole view. The cap
+  // sits well above the tiny-planet walk drift (~0.1 rad/s) so plain running
+  // never hits it; only the 2.6 rad/s turn does.
+  const maxStep=CAM_FOLLOW_MAX_RAD*dt;
+  if(_camPrevFollow.angleTo(camFollowHeading)>maxStep){
+    const sign=Math.sign(up.dot(_camSwing.crossVectors(_camPrevFollow,camFollowHeading)))||1;
+    camFollowHeading.copy(_camPrevFollow).applyAxisAngle(up,sign*maxStep);
+    camFollowHeading.addScaledVector(up,-camFollowHeading.dot(up)).normalize();
+  }
   const lookH=THREE.MathUtils.lerp(1.63,1.5,b);        // above the head → runner anchors near the bottom edge
-  _camLookGoal.copy(player.position).addScaledVector(up,lookH).addScaledVector(camFollowHeading,curSpeed*0.065*(1-b));
+  const hopLift=alt;                                   // the frame stays grounded while the runner hops within it
+  _camLookGoal.copy(player.position).addScaledVector(up,lookH-hopLift);
   camLook.lerp(_camLookGoal, 1-Math.exp(-dt*8.5));
   const look=camLook;
   const horiz=Math.cos(pitch)*dist, vert=Math.sin(pitch)*dist+THREE.MathUtils.lerp(1.44,1.6,b);
@@ -2783,14 +2796,14 @@ function updateCamera(dt){
       if(score>bestScore){ bestScore=score; avoidTarget=a; }
     }
   }
-  const avoidRate=Math.abs(avoidTarget)>Math.abs(camAvoidYaw)?7.0:2.6;
+  const avoidRate=Math.abs(avoidTarget)>Math.abs(camAvoidYaw)?3.5:2.6;
   camAvoidYaw+=(avoidTarget-camAvoidYaw)*(1-Math.exp(-dt*avoidRate));
   const camF=camFollowHeading.clone().applyAxisAngle(up,camYaw+camAvoidYaw);
-  const desired=player.position.clone().addScaledVector(camF,-horiz).addScaledVector(up,vert);
+  const desired=player.position.clone().addScaledVector(camF,-horiz).addScaledVector(up,vert-hopLift);
   // occlusion: snap in front of a blocking facade fast, relax back out slowly
   let pull=1;
   if(b<0.85) pull=Math.max(camBlockT(look,desired), Math.min(1,1.22/Math.max(dist,0.01)));
-  camPull += (pull<camPull) ? (pull-camPull)*Math.min(1,dt*14) : (pull-camPull)*Math.min(1,dt*2.4);
+  camPull += (pull<camPull) ? (pull-camPull)*Math.min(1,dt*9) : (pull-camPull)*Math.min(1,dt*2.4);
   if(camPull<0.999) desired.sub(look).multiplyScalar(camPull).add(look);
   camera.position.lerp(desired, 1-Math.exp(-dt*THREE.MathUtils.lerp(6.2,4.5,b)));
   camUp.lerp(up, 1-Math.exp(-dt*8)).normalize();

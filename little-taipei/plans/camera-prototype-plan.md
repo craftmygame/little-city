@@ -81,9 +81,9 @@ observation is valuable while preserving the authored movement feel.
 
 ## Access and presentation
 
-- Start with a shareable query parameter, e.g. `?camera=locked`,
-  `?camera=pitch-look`, `?camera=yaw-look`, `?camera=less-freelook`, or
-  `?camera=freelook`.
+- Start with a shareable query parameter, e.g. `?cam=locked`,
+  `?cam=pitch-look`, `?cam=yaw-look`, `?cam=less-freelook`, or
+  `?cam=freelook`.
 - Invalid/missing values resolve to `locked`.
 - Add a small, unobtrusive in-game mode label or toggle only if it materially
   improves play-testing. It must clearly mark non-default modes as prototypes.
@@ -118,7 +118,7 @@ observation is valuable while preserving the authored movement feel.
 ## Acceptance checks
 
 - `npm run check` passes.
-- `?camera=locked` reproduces the current street and map camera behaviour.
+- `?cam=locked` reproduces the current street and map camera behaviour.
 - Pointer/touch look does not trigger accidental interactions after a drag.
 - Click/tap interaction still works without a drag.
 - Street camera avoids/pulls in around buildings in all modes.
@@ -157,16 +157,16 @@ touch paths. There is no second renderer, camera, or movement system.
 
 ### Try it
 
-- Baseline: `/?camera=locked` (also the fallback for no/invalid `camera` value).
-- Conservative variation: `/?camera=pitch-look`.
-- Horizontal counterpart: `/?camera=yaw-look`.
-- Restrained two-axis variation: `/?camera=less-freelook`.
-- Camera-only variation: `/?camera=freelook`.
+- Baseline: `/?cam=locked` (also the fallback for no/invalid `cam` value).
+- Conservative variation: `/?cam=pitch-look`.
+- Horizontal counterpart: `/?cam=yaw-look`.
+- Restrained two-axis variation: `/?cam=less-freelook`.
+- Camera-only variation: `/?cam=freelook`.
 - While running, `window.__cameraControls()` reports the active mode and
   `window.__cameraControls('freelook')` (or either other mode) switches it for
   quick developer checks. `window.__cam` and `window.__camMode` remain the
   existing framing/zoom helpers.
-- Add `?camera-preview` to any of those URLs to show the in-world **Camera rig ·
+- Add `?cam-preview` to any of those URLs to show the in-world **Camera rig ·
   dev** strip. Its three buttons deliberately present the original comparison
   set — Locked, Pitch, Free restrained, and Free — and update the `camera` URL
   parameter without reloading. The strip is opt-in so normal play and any
@@ -229,11 +229,11 @@ looking improves exploration against the existing authored street-level feel.
 
 **What changed**
 
-- Kept `?camera=locked` as the default and control condition.
-- Added `?camera=pitch-look` for vertical-only camera articulation.
-- Added `?camera=yaw-look` for horizontal corner-peeking only.
-- Added `?camera=less-freelook` for a slower, capped two-axis orbit.
-- Added `?camera=freelook` for the full two-axis camera-only comparison.
+- Kept `?cam=locked` as the default and control condition.
+- Added `?cam=pitch-look` for vertical-only camera articulation.
+- Added `?cam=yaw-look` for horizontal corner-peeking only.
+- Added `?cam=less-freelook` for a slower, capped two-axis orbit.
+- Added `?cam=freelook` for the full two-axis camera-only comparison.
 - Kept collision pull-in, shoulder avoidance, map zoom, click/tap interaction,
   touch joystick movement, quests, and multiplayer on their existing paths.
 - Updated help copy and added a small prototype label for non-default modes.
